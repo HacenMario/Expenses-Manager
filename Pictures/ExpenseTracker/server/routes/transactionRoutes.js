@@ -6,6 +6,7 @@ const { protect } = require('../middleware/auth');
 const axios = require('axios');
 const nodemailer = require('nodemailer');
 const emailTranslations = require('../utils/emailTranslations');
+const { sendBudgetAlertEmail } = require('../services/emailService');
 
 // ===== إعداد Nodemailer =====
 const transporter = nodemailer.createTransport({
@@ -80,21 +81,21 @@ router.post('/', protect, async (req, res) => {
     try {
         const transaction = await Transaction.create({ ...req.body, user: req.user.id });
 
-        // جلب أحدث البيانات للتحقق من الميزانية
+        // جلب جميع المعاملات لحساب الإجماليات
         const transactions = await Transaction.find({ user: req.user.id });
         const totalExpenses = transactions
             .filter(t => t.type === 'expense')
             .reduce((sum, t) => sum + t.amount, 0);
         const user = await User.findById(req.user.id);
-        const monthlyBudget = user.monthlyBudget || 0;
+        const monthlyBudget = user.monthlyBudget || 1000;
         const isOverBudget = totalExpenses > monthlyBudget;
 
+        // إرسال البريد الإلكتروني إذا تم التجاوز
         if (isOverBudget) {
-            const overspentAmount = totalExpenses - monthlyBudget;
-            // إرسال البريد مع الترجمة حسب لغة المستخدم
-            await sendBudgetAlertEmail(user, overspentAmount, totalExpenses);
+            await sendBudgetAlertEmail(user, totalExpenses, monthlyBudget);
         }
 
+        // إرجاع الاستجابة مع بيانات التجاوز
         res.status(201).json({
             success: true,
             data: transaction,
