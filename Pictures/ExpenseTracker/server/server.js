@@ -31,6 +31,16 @@ app.get('/favicon.ico', (req, res) => {
     });
 });
 
+// مسار اختبار البريد الإلكتروني (للتحقق من الإعدادات)
+app.get('/api/test-email', async (req, res) => {
+    const { testEmailConnection } = require('./services/emailService');
+    const result = await testEmailConnection();
+    res.json({
+        success: result,
+        message: result ? 'Email configured correctly' : 'Email configuration failed'
+    });
+});
+
 // الصفحة الرئيسية
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, '../client/index.html'));
