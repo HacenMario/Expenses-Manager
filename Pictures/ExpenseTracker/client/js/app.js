@@ -311,6 +311,7 @@ async function loadTransactions() {
     } catch (err) { console.error('خطأ في تحميل المعاملات', err); }
 }
 
+// ===== تحميل الملخص (مع تحديث التحذير) =====
 async function loadSummary() {
     try {
         const res = await fetch(`${API}/transactions/summary`, {
@@ -319,20 +320,23 @@ async function loadSummary() {
         const data = await res.json();
         if (data.success) {
             const summary = data.data;
-            // عرض الأرقام بدون كسور عشرية باستخدام toFixed(0)
             document.getElementById('totalIncome').textContent = summary.totalIncome.toFixed(0) + ' ' + CURRENCY;
             document.getElementById('totalExpenses').textContent = summary.totalExpenses.toFixed(0) + ' ' + CURRENCY;
             document.getElementById('remainingBudget').textContent = summary.remainingBudget.toFixed(0) + ' ' + CURRENCY;
             document.getElementById('monthlyBudgetDisplay').textContent = summary.monthlyBudget.toFixed(0) + ' ' + CURRENCY;
             document.getElementById('transactionCount').textContent = summary.transactionCount;
 
+            // تحديث التحذير
             checkBudgetAlert(summary);
+            // تحديث الرسوم البيانية
             updateCharts(summary.categoryTotals, transactions);
         }
-    } catch (err) { console.error('خطأ في تحميل الإحصائيات', err); }
+    } catch (err) {
+        console.error('خطأ في تحميل الإحصائيات', err);
+    }
 }
 
-// ===== التحقق من الميزانية =====
+// ===== التحقق من الميزانية (مع تحديث واجهة التحذير) =====
 function checkBudgetAlert(summaryData) {
     const alertDiv = document.getElementById('budgetAlert');
     const alertMsg = document.getElementById('budgetAlertMessage');
@@ -406,15 +410,30 @@ async function addTransaction(e) {
         });
         const result = await res.json();
         if (result.success) {
+            // إعادة تعيين النموذج
             document.getElementById('transactionForm').reset();
+
+            // تحديث البيانات فوراً
             await loadTransactions();
             await loadSummary();
+
+            // عرض تحذير إذا تم التجاوز
             if (result.isOverBudget) {
                 const overspent = (result.totalExpenses - result.monthlyBudget).toFixed(0);
-                alert(t('overBudgetToast', { budget: result.monthlyBudget.toFixed(0) + ' ' + CURRENCY, amount: overspent + ' ' + CURRENCY }));
+                const msg = t('overBudgetToast', {
+                    budget: result.monthlyBudget.toFixed(0) + ' ' + CURRENCY,
+                    amount: overspent + ' ' + CURRENCY
+                });
+                alert('⚠️ ' + msg);
+                // التأكد من ظهور التحذير في الصفحة (ستقوم checkBudgetAlert بذلك)
             }
-        } else alert('❌ ' + result.message);
-    } catch { alert('❌ ' + t('serverError')); }
+        } else {
+            alert('❌ ' + result.message);
+        }
+    } catch (error) {
+        console.error('Error adding transaction:', error);
+        alert('❌ ' + t('serverError'));
+    }
 }
 
 async function deleteTransaction(id) {
