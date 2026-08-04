@@ -374,7 +374,7 @@ function updateBudgetProgress(summaryData) {
         progressBar.classList.add('low');
         statusDiv.className = 'progress-status';
         statusDiv.innerHTML = `<i class="fas fa-check-circle"></i> <span>${t('budgetStatusSafe') || 'ضمن الميزانية'}</span>`;
-    } else if (percentage < 90) {
+    } else if (percentage < 100) {
         progressBar.classList.add('medium');
         statusDiv.className = 'progress-status warning';
         statusDiv.innerHTML = `<i class="fas fa-exclamation-triangle"></i> <span>${t('budgetStatusWarning') || 'اقتربت من الحد الأقصى'}</span>`;
