@@ -1,7 +1,7 @@
 const nodemailer = require('nodemailer');
 const emailTranslations = require('../utils/emailTranslations');
 
-// ===== إعداد Nodemailer مع إعدادات محسنة =====
+// ===== إعداد Nodemailer مع إعدادات مناسبة لـ Render =====
 let transporter = null;
 
 const createTransporter = () => {
@@ -12,37 +12,34 @@ const createTransporter = () => {
             return null;
         }
 
-        // استخدام إعدادات أكثر توافقاً مع Render
+        // إعدادات Nodemailer المتوافقة مع Render
+        // استخدام TLS عبر المنفذ 587 (الأكثر توافقاً مع بيئات السحابة)
         transporter = nodemailer.createTransport({
             host: 'smtp.gmail.com',
-            port: 465,           // استخدام SSL بدلاً من TLS
-            secure: true,        // true للمنفذ 465
+            port: 587,
+            secure: false, // false لأننا نستخدم TLS عبر STARTTLS
             auth: {
                 user: process.env.EMAIL_USER,
                 pass: process.env.EMAIL_PASS
             },
-            // إعدادات إضافية لتحسين الموثوقية
+            // إعدادات إضافية لتحسين الموثوقية على Render
             pool: true,
             maxConnections: 1,
             rateLimit: true,
-            // زيادة المهلات
-            connectionTimeout: 30000,  // 30 ثانية
+            // زيادة المهلات لتجنب انتهاء الوقت
+            connectionTimeout: 30000, // 30 ثانية
             greetingTimeout: 30000,
             socketTimeout: 30000,
             // إعدادات TLS
             tls: {
-                rejectUnauthorized: false // لتجنب مشاكل الشهادات
-            }
+                rejectUnauthorized: false, // تجنب مشاكل الشهادات في بيئات السحابة
+                minVersion: 'TLSv1.2'
+            },
+            // إعدادات DEBUG (اختياري، لإظهار المزيد من التفاصيل)
+            debug: process.env.NODE_ENV === 'development'
         });
 
-        // التحقق من الاتصال (اختبار)
-        transporter.verify((error, success) => {
-            if (error) {
-                console.error('❌ Email transporter verification failed:', error.message);
-            } else {
-                console.log('✅ Email transporter is ready');
-            }
-        });
+        console.log('✅ Email transporter created with TLS (port 587)');
     }
     return transporter;
 };
@@ -111,8 +108,8 @@ const sendBudgetAlertEmail = async (user, totalExpenses, monthlyBudget) => {
                 attempts++;
                 console.error(`❌ Email attempt ${attempts} failed:`, err.message);
                 if (attempts < maxAttempts) {
-                    // انتظار ثانيتين قبل إعادة المحاولة
-                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    // انتظار 3 ثوانٍ قبل إعادة المحاولة
+                    await new Promise(resolve => setTimeout(resolve, 3000));
                 }
             }
         }
@@ -135,8 +132,9 @@ const testEmailConnection = async () => {
             return false;
         }
 
+        // التحقق من صحة الاتصال
         await transporterInstance.verify();
-        console.log('✅ Email transporter is ready');
+        console.log('✅ Email transporter is ready (TLS, port 587)');
         return true;
     } catch (error) {
         console.error('❌ Email transporter verification failed:', error.message);
