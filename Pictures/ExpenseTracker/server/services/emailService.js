@@ -1,37 +1,39 @@
 const nodemailer = require('nodemailer');
+const emailTranslations = require('../utils/emailTranslations');
 
-// إعدادات البريد الإلكتروني - استخدم إعداداتك الخاصة
 const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com', // أو أي مزود آخر
-    port: 587,
-    secure: false, // true for 465, false for other ports
+    service: 'gmail',
     auth: {
-        user: process.env.EMAIL_USER, // بريدك الإلكتروني
-        pass: process.env.EMAIL_PASS  // كلمة مرور التطبيق
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
     }
 });
 
-const sendBudgetAlertEmail = async (userEmail, userName, overspentAmount, monthlyBudget, totalExpenses) => {
+const sendBudgetAlertEmail = async (user, totalExpenses, monthlyBudget) => {
+    const lang = user.language || 'ar';
+    const t = emailTranslations[lang] || emailTranslations.ar;
+    const overspent = totalExpenses - monthlyBudget;
+
     const mailOptions = {
         from: process.env.EMAIL_USER,
-        to: userEmail,
-        subject: `⚠️ تنبيه: تجاوزت ميزانيتك الشهرية`,
+        to: user.email,
+        subject: t.subject,
         html: `
-            <h2>مرحباً ${userName},</h2>
-            <p>لقد تجاوزت ميزانيتك الشهرية المحددة بـ <strong>${monthlyBudget}</strong>.</p>
-            <p>إجمالي مصروفاتك الحالية: <strong>${totalExpenses}</strong></p>
-            <p>المبلغ المتجاوز: <strong>${overspentAmount}</strong></p>
-            <p>يرجى مراجعة مصروفاتك لتجنب الإسراف.</p>
+            <h2>${t.greeting(user.name)}</h2>
+            <p>${t.body1} <strong>${monthlyBudget} ${user.currency}</strong>.</p>
+            <p>${t.body2} <strong>${totalExpenses} ${user.currency}</strong></p>
+            <p>${t.body3} <strong>${overspent} ${user.currency}</strong></p>
+            <p>${t.advice}</p>
             <hr>
-            <p>مع تحيات تطبيق إدارة المصروفات</p>
+            <p>${t.footer}</p>
         `
     };
 
     try {
         await transporter.sendMail(mailOptions);
-        console.log(`✅ تم إرسال بريد إشعار إلى ${userEmail}`);
+        console.log(`✅ Email sent to ${user.email}`);
     } catch (error) {
-        console.error('❌ فشل إرسال البريد:', error);
+        console.error('❌ Email error:', error.message);
     }
 };
 
