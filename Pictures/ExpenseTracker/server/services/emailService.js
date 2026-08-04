@@ -1,7 +1,7 @@
 const nodemailer = require('nodemailer');
 const emailTranslations = require('../utils/emailTranslations');
 
-// ===== إعداد Nodemailer =====
+// ===== إعداد Nodemailer مع إعدادات محسنة =====
 let transporter = null;
 
 const createTransporter = () => {
@@ -12,19 +12,36 @@ const createTransporter = () => {
             return null;
         }
 
+        // استخدام إعدادات أكثر توافقاً مع Render
         transporter = nodemailer.createTransport({
-            service: 'gmail',
+            host: 'smtp.gmail.com',
+            port: 465,           // استخدام SSL بدلاً من TLS
+            secure: true,        // true للمنفذ 465
             auth: {
                 user: process.env.EMAIL_USER,
                 pass: process.env.EMAIL_PASS
             },
             // إعدادات إضافية لتحسين الموثوقية
-            tls: {
-                rejectUnauthorized: false
-            },
-            pool: true, // استخدام تجمع الاتصالات
+            pool: true,
             maxConnections: 1,
-            rateLimit: true // تجنب الحظر من Gmail
+            rateLimit: true,
+            // زيادة المهلات
+            connectionTimeout: 30000,  // 30 ثانية
+            greetingTimeout: 30000,
+            socketTimeout: 30000,
+            // إعدادات TLS
+            tls: {
+                rejectUnauthorized: false // لتجنب مشاكل الشهادات
+            }
+        });
+
+        // التحقق من الاتصال (اختبار)
+        transporter.verify((error, success) => {
+            if (error) {
+                console.error('❌ Email transporter verification failed:', error.message);
+            } else {
+                console.log('✅ Email transporter is ready');
+            }
         });
     }
     return transporter;
