@@ -851,3 +851,165 @@ html[lang="fr"] #transactions-list td {
 .budget-alert i {
     font-size: 24px;
 }
+
+/* ===== شريط تقدم الميزانية ===== */
+#budget-progress {
+    background: #fff;
+    padding: 20px 25px;
+    border-radius: 16px;
+    margin-bottom: 30px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    border: 1px solid #f0f0f0;
+}
+
+.progress-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.progress-info {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.progress-label {
+    font-weight: 600;
+    color: #333;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.progress-label i {
+    color: #667eea;
+}
+
+.progress-percentage {
+    font-size: 20px;
+    font-weight: 700;
+    color: #667eea;
+    min-width: 60px;
+    text-align: center;
+}
+
+.progress-details {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #666;
+    font-size: 14px;
+}
+
+.progress-details #spentAmount {
+    font-weight: 600;
+    color: #fc8181;
+}
+
+.progress-details #budgetAmount {
+    font-weight: 600;
+    color: #667eea;
+}
+
+/* ===== شريط التقدم ===== */
+.progress-bar-container {
+    width: 100%;
+    height: 28px;
+    background: #edf2f7;
+    border-radius: 14px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06);
+    margin-bottom: 12px;
+}
+
+.progress-bar {
+    height: 100%;
+    border-radius: 14px;
+    transition: width 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 12px;
+    min-width: 40px;
+    position: relative;
+    background: #48bb78;
+}
+
+/* ألوان الشريط حسب النسبة */
+.progress-bar.low {
+    background: linear-gradient(90deg, #48bb78, #68d391);
+}
+.progress-bar.medium {
+    background: linear-gradient(90deg, #f6ad55, #ed8936);
+}
+.progress-bar.high {
+    background: linear-gradient(90deg, #fc8181, #e53e3e);
+    animation: pulse-danger 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-danger {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.8; }
+}
+
+.progress-bar-text {
+    font-size: 12px;
+    font-weight: 700;
+    color: #fff;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    white-space: nowrap;
+}
+
+/* ===== حالة الميزانية ===== */
+.progress-status {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 8px 14px;
+    border-radius: 8px;
+    background: #f0fff4;
+    color: #276749;
+}
+
+.progress-status i {
+    font-size: 18px;
+}
+
+.progress-status.warning {
+    background: #fffbeb;
+    color: #9c6f2e;
+}
+
+.progress-status.danger {
+    background: #fff5f5;
+    color: #c53030;
+}
+
+/* ===== تعديلات التجاوب ===== */
+@media (max-width: 600px) {
+    .progress-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .progress-info {
+        width: 100%;
+        justify-content: space-between;
+    }
+    .progress-details {
+        font-size: 13px;
+    }
+    .progress-bar-container {
+        height: 22px;
+    }
+    .progress-bar-text {
+        font-size: 10px;
+    }
+}
