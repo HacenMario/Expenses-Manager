@@ -326,6 +326,9 @@ async function loadSummary() {
             document.getElementById('monthlyBudgetDisplay').textContent = summary.monthlyBudget.toFixed(0) + ' ' + CURRENCY;
             document.getElementById('transactionCount').textContent = summary.transactionCount;
 
+            // ===== تحديث شريط تقدم الميزانية (إضافة جديدة) =====
+            updateBudgetProgress(summary);
+
             // تحديث التحذير (هام)
             checkBudgetAlert(summary);
             // تحديث الرسوم البيانية
@@ -335,6 +338,50 @@ async function loadSummary() {
         }
     } catch (err) {
         console.error('Error loading summary:', err);
+    }
+}
+
+// ===== تحديث شريط تقدم الميزانية =====
+function updateBudgetProgress(summaryData) {
+    const { totalExpenses, monthlyBudget } = summaryData;
+
+    // تحديث الأرقام
+    document.getElementById('spentAmount').textContent = totalExpenses.toFixed(0) + ' ' + CURRENCY;
+    document.getElementById('budgetAmount').textContent = monthlyBudget.toFixed(0) + ' ' + CURRENCY;
+
+    // حساب النسبة المئوية
+    let percentage = 0;
+    if (monthlyBudget > 0) {
+        percentage = Math.min((totalExpenses / monthlyBudget) * 100, 100);
+    }
+    percentage = Math.round(percentage);
+
+    // تحديث النسبة المعروضة
+    document.getElementById('budgetPercentage').textContent = percentage + '%';
+
+    // تحديث شريط التقدم
+    const progressBar = document.getElementById('budgetProgressBar');
+    const progressText = document.getElementById('progressBarText');
+    const statusDiv = document.getElementById('progressStatus');
+
+    progressBar.style.width = percentage + '%';
+    progressText.textContent = percentage + '%';
+
+    // تحديث اللون والحالة حسب النسبة
+    progressBar.classList.remove('low', 'medium', 'high');
+    
+    if (percentage < 70) {
+        progressBar.classList.add('low');
+        statusDiv.className = 'progress-status';
+        statusDiv.innerHTML = `<i class="fas fa-check-circle"></i> <span>${t('budgetStatusSafe') || 'ضمن الميزانية'}</span>`;
+    } else if (percentage < 90) {
+        progressBar.classList.add('medium');
+        statusDiv.className = 'progress-status warning';
+        statusDiv.innerHTML = `<i class="fas fa-exclamation-triangle"></i> <span>${t('budgetStatusWarning') || 'اقتربت من الحد الأقصى'}</span>`;
+    } else {
+        progressBar.classList.add('high');
+        statusDiv.className = 'progress-status danger';
+        statusDiv.innerHTML = `<i class="fas fa-times-circle"></i> <span>${t('budgetStatusDanger') || 'تجاوزت الميزانية!'}</span>`;
     }
 }
 
