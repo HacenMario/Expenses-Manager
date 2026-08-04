@@ -36,7 +36,41 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, '../client/index.html'));
 });
 
+// ===== مسار للتحقق من حالة الخادم (لـ UptimeRobot) =====
+app.get('/api/status', (req, res) => {
+    res.status(200).json({
+        status: 'ok',
+        message: 'Server is running',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime()
+    });
+});
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     console.log(`🚀 Server running on http://localhost:${PORT}`);
 });
+
+// ===== إبقاء الخادم نشطاً =====
+const keepAlive = () => {
+    const port = process.env.PORT || 5000;
+    const url = `http://localhost:${port}/api/status`;
+    
+    setInterval(async () => {
+        try {
+            const response = await fetch(url);
+            const data = await response.json();
+            console.log(`✅ Keep-alive ping: ${data.message || 'OK'} at ${new Date().toISOString()}`);
+        } catch (error) {
+            console.error('❌ Keep-alive ping failed:', error.message);
+        }
+    }, 14 * 60 * 1000); // كل 14 دقيقة (أقل من 15 دقيقة التي تدخل فيها Render في السكون)
+};
+
+// تشغيل الـ Keep-alive بعد بدء الخادم
+if (process.env.NODE_ENV !== 'production') {
+    console.log('🔄 Keep-alive enabled for development');
+} else {
+    // في بيئة الإنتاج (Render)، شغّل الـ Keep-alive
+    setTimeout(keepAlive, 60 * 1000); // انتظر دقيقة بعد بدء الخادم
+}
