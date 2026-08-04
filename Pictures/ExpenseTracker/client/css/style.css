@@ -722,3 +722,132 @@ html[lang="fr"] #transactions-list td {
 #transactions-list td .far {
     margin: 0 3px;
 }
+
+/* ===== تحسين التجاوب مع الهواتف والأجهزة اللوحية ===== */
+
+/* للأجهزة الصغيرة جداً (هواتف) */
+@media (max-width: 480px) {
+    /* إعادة تنسيق البطاقات إلى عمود واحد */
+    #stats {
+        grid-template-columns: 1fr !important;
+        gap: 10px;
+    }
+    .card {
+        padding: 12px;
+    }
+    .card p {
+        font-size: 20px;
+    }
+    /* تصغير حجم الخط في الجدول */
+    table {
+        font-size: 12px;
+    }
+    th, td {
+        padding: 8px 6px;
+    }
+    /* تحويل نموذج الإضافة إلى عمود واحد */
+    #transactionForm {
+        grid-template-columns: 1fr;
+    }
+    /* إخفاء بعض الأعمدة في الجدول إذا لزم الأمر */
+    .table-responsive {
+        overflow-x: auto;
+    }
+    /* تكبير الأزرار لتسهيل النقر */
+    .btn {
+        padding: 12px 16px;
+        font-size: 16px;
+    }
+    /* تنسيق عنوان الصفحة */
+    header h1 {
+        font-size: 18px;
+    }
+    .user-info {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    /* عرض الرسوم البيانية بشكل كامل */
+    .chart-container {
+        height: 200px;
+    }
+}
+
+/* للأجهزة المتوسطة (تابلت) */
+@media (min-width: 481px) and (max-width: 768px) {
+    #stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    #transactionForm {
+        grid-template-columns: 1fr 1fr;
+    }
+    .chart-container {
+        height: 220px;
+    }
+    table {
+        font-size: 13px;
+    }
+}
+
+/* للأجهزة الكبيرة (شاشات عريضة) */
+@media (min-width: 1200px) {
+    #app {
+        padding: 40px;
+    }
+    .card p {
+        font-size: 32px;
+    }
+}
+
+/* تحسين عرض الجدول على الشاشات الصغيرة */
+@media (max-width: 600px) {
+    /* جعل الجدول قابل للتمرير أفقيًا */
+    .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    /* تقليل حجم الخط في الجدول أكثر */
+    table {
+        font-size: 11px;
+    }
+    th, td {
+        padding: 6px 4px;
+        white-space: nowrap;
+    }
+    /* إخفاء عمود "النوع" إذا كان ضيقاً جداً (اختياري) */
+    /* يمكن إخفاء عمود التاريخ أو النوع إذا كانت الشاشة صغيرة جداً */
+    th:nth-child(4), td:nth-child(4) {
+        display: none;
+    }
+}
+
+/* تحسين مربعات الإدخال للشاشات الصغيرة */
+@media (max-width: 480px) {
+    input, select, button {
+        font-size: 16px !important; /* لمنع تكبير تلقائي من iOS */
+    }
+    .login-container {
+        padding: 20px;
+        margin: 30px 10px;
+    }
+    .login-container h2 {
+        font-size: 20px;
+    }
+}
+
+/* تحسين عرض الرسوم البيانية */
+@media (max-width: 768px) {
+    #charts-section {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+}
+
+/* إصلاح ظهور التحذير على الهاتف */
+.budget-alert {
+    flex-direction: column;
+    text-align: center;
+    padding: 12px 16px;
+}
+.budget-alert i {
+    font-size: 24px;
+}
