@@ -5,7 +5,7 @@ const User = require('../models/User');
 const { protect } = require('../middleware/auth');
 const axios = require('axios');
 const nodemailer = require('nodemailer');
-const { sendBudgetAlertEmail } = require('../services/emailService');
+const emailTranslations = require('../utils/emailTranslations');
 
 // ===== إعداد Nodemailer =====
 const transporter = nodemailer.createTransport({
