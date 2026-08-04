@@ -62,6 +62,33 @@
             </div>
         </section>
 
+        <!-- ===== شريط تقدم الميزانية ===== -->
+<section id="budget-progress">
+    <div class="progress-header">
+        <div class="progress-info">
+            <span class="progress-label">
+                <i class="fas fa-chart-simple"></i> 
+                <span data-i18n="budgetProgress">الميزانية الشهرية</span>
+            </span>
+            <span class="progress-percentage" id="budgetPercentage">0%</span>
+        </div>
+        <div class="progress-details">
+            <span id="spentAmount">0 DZD</span>
+            <span>من</span>
+            <span id="budgetAmount">0 DZD</span>
+        </div>
+    </div>
+    <div class="progress-bar-container">
+        <div class="progress-bar" id="budgetProgressBar" style="width: 0%;">
+            <span class="progress-bar-text" id="progressBarText">0%</span>
+        </div>
+    </div>
+    <div class="progress-status" id="progressStatus">
+        <i class="fas fa-check-circle"></i>
+        <span data-i18n="budgetStatus">ضمن الميزانية</span>
+    </div>
+</section>
+
         <!-- ===== الرسوم البيانية ===== -->
         <section id="charts-section">
             <div class="chart-wrapper">
