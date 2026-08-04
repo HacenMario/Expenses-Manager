@@ -120,7 +120,7 @@ router.delete('/:id', protect, async (req, res) => {
 router.get('/summary', protect, async (req, res) => {
     try {
         const user = await User.findById(req.user.id);
-        const preferredCurrency = user.currency || 'USD';
+        const preferredCurrency = user.currency || 'DZD';
 
         const transactions = await Transaction.find({ user: req.user.id });
 
@@ -132,7 +132,7 @@ router.get('/summary', protect, async (req, res) => {
             .reduce((sum, t) => sum + t.amount, 0);
         const balanceBase = totalIncomeBase - totalExpensesBase;
 
-        const rate = await getExchangeRate('USD', preferredCurrency);
+        const rate = await getExchangeRate('DZD', preferredCurrency);
 
         const totalIncome = totalIncomeBase * rate;
         const totalExpenses = totalExpensesBase * rate;
