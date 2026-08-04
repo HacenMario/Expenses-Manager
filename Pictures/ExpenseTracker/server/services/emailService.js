@@ -10,30 +10,32 @@ const transporter = nodemailer.createTransport({
 });
 
 const sendBudgetAlertEmail = async (user, totalExpenses, monthlyBudget) => {
-    const lang = user.language || 'ar';
-    const t = emailTranslations[lang] || emailTranslations.ar;
-    const overspent = totalExpenses - monthlyBudget;
-
-    const mailOptions = {
-        from: process.env.EMAIL_USER,
-        to: user.email,
-        subject: t.subject,
-        html: `
-            <h2>${t.greeting(user.name)}</h2>
-            <p>${t.body1} <strong>${monthlyBudget} ${user.currency}</strong>.</p>
-            <p>${t.body2} <strong>${totalExpenses} ${user.currency}</strong></p>
-            <p>${t.body3} <strong>${overspent} ${user.currency}</strong></p>
-            <p>${t.advice}</p>
-            <hr>
-            <p>${t.footer}</p>
-        `
-    };
-
     try {
+        const lang = user.language || 'ar';
+        const t = emailTranslations[lang] || emailTranslations.ar;
+        const overspent = (totalExpenses - monthlyBudget).toFixed(2);
+
+        const mailOptions = {
+            from: process.env.EMAIL_USER,
+            to: user.email,
+            subject: t.subject,
+            html: `
+                <h2>${t.greeting(user.name)}</h2>
+                <p>${t.body1} <strong>${monthlyBudget} ${user.currency || 'DZD'}</strong>.</p>
+                <p>${t.body2} <strong>${totalExpenses.toFixed(2)} ${user.currency || 'DZD'}</strong></p>
+                <p>${t.body3} <strong>${overspent} ${user.currency || 'DZD'}</strong></p>
+                <p>${t.advice}</p>
+                <hr>
+                <p>${t.footer}</p>
+            `
+        };
+
         await transporter.sendMail(mailOptions);
         console.log(`✅ Email sent to ${user.email}`);
+        return true;
     } catch (error) {
         console.error('❌ Email error:', error.message);
+        return false;
     }
 };
 
