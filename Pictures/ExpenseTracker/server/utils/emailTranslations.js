@@ -7,8 +7,7 @@ const emailTranslations = {
         body2: 'إجمالي مصروفاتك الحالية:',
         body3: 'المبلغ المتجاوز:',
         advice: 'يرجى مراجعة مصروفاتك لتجنب الإسراف.',
-        footer: 'مع تحيات تطبيق إدارة المصروفات',
-        currency: 'DZD'
+        footer: 'مع تحيات تطبيق إدارة المصروفات'
     },
     en: {
         subject: '⚠️ Alert: You have exceeded your monthly budget',
@@ -17,8 +16,7 @@ const emailTranslations = {
         body2: 'Your current total expenses:',
         body3: 'Overspent amount:',
         advice: 'Please review your expenses to avoid overspending.',
-        footer: 'Best regards, Expense Tracker App',
-        currency: 'DZD'
+        footer: 'Best regards, Expense Tracker App'
     },
     fr: {
         subject: '⚠️ Alerte : Vous avez dépassé votre budget mensuel',
@@ -27,8 +25,7 @@ const emailTranslations = {
         body2: 'Vos dépenses totales actuelles :',
         body3: 'Montant dépassé :',
         advice: 'Veuillez revoir vos dépenses pour éviter les excès.',
-        footer: 'Cordialement, Application de suivi des dépenses',
-        currency: 'DZD'
+        footer: 'Cordialement, Application de suivi des dépenses'
     }
 };
 
