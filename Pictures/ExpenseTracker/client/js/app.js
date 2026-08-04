@@ -1,6 +1,6 @@
 const API = window.location.hostname === 'localhost' 
     ? 'http://localhost:5000/api' 
-    : 'https://your-backend-name.onrender.com/api';
+    : 'https://expenses-manager-z2up.onrender.com/api';
 
 let token = localStorage.getItem('token');
 let transactions = [];
