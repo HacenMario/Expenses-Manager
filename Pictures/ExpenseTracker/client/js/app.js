@@ -326,13 +326,15 @@ async function loadSummary() {
             document.getElementById('monthlyBudgetDisplay').textContent = summary.monthlyBudget.toFixed(0) + ' ' + CURRENCY;
             document.getElementById('transactionCount').textContent = summary.transactionCount;
 
-            // تحديث التحذير
+            // تحديث التحذير (هام)
             checkBudgetAlert(summary);
             // تحديث الرسوم البيانية
             updateCharts(summary.categoryTotals, transactions);
+        } else {
+            console.error('Error in summary:', data.message);
         }
     } catch (err) {
-        console.error('خطأ في تحميل الإحصائيات', err);
+        console.error('Error loading summary:', err);
     }
 }
 
@@ -399,6 +401,13 @@ async function addTransaction(e) {
     const category = document.getElementById('category').value;
     const type = document.getElementById('type').value;
     if (!desc || !amount || !category) return alert(t('fillAllFields'));
+
+    // تعطيل الزر مؤقتاً لمنع النقر المتكرر
+    const submitBtn = document.querySelector('#transactionForm button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '⏳ جاري الإضافة...';
+
     try {
         const res = await fetch(`${API}/transactions`, {
             method: 'POST',
@@ -408,16 +417,19 @@ async function addTransaction(e) {
             },
             body: JSON.stringify({ description: desc, amount, category, type })
         });
+
+        // قراءة الرد (حتى لو كان خطأ)
         const result = await res.json();
+
         if (result.success) {
             // إعادة تعيين النموذج
             document.getElementById('transactionForm').reset();
 
-            // تحديث البيانات فوراً
+            // تحديث البيانات (الجدول، الإحصائيات، التحذير)
             await loadTransactions();
             await loadSummary();
 
-            // عرض تحذير إذا تم التجاوز
+            // عرض تحذير فوري إذا تم التجاوز
             if (result.isOverBudget) {
                 const overspent = (result.totalExpenses - result.monthlyBudget).toFixed(0);
                 const msg = t('overBudgetToast', {
@@ -425,14 +437,18 @@ async function addTransaction(e) {
                     amount: overspent + ' ' + CURRENCY
                 });
                 alert('⚠️ ' + msg);
-                // التأكد من ظهور التحذير في الصفحة (ستقوم checkBudgetAlert بذلك)
+                // تحديث التحذير في الصفحة (ستقوم loadSummary بالاتصال بـ checkBudgetAlert)
             }
         } else {
-            alert('❌ ' + result.message);
+            alert('❌ ' + (result.message || t('serverError')));
         }
     } catch (error) {
         console.error('Error adding transaction:', error);
         alert('❌ ' + t('serverError'));
+    } finally {
+        // إعادة تمكين الزر
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
     }
 }
 
