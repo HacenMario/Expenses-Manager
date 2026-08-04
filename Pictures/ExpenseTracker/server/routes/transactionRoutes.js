@@ -6,6 +6,7 @@ const { protect } = require('../middleware/auth');
 const axios = require('axios');
 const nodemailer = require('nodemailer');
 const emailTranslations = require('../utils/emailTranslations');
+const { sendBudgetAlertEmail } = require('../services/emailService');
 
 // ===== إعداد Nodemailer =====
 const transporter = nodemailer.createTransport({
@@ -32,6 +33,16 @@ async function getExchangeRate(from, to) {
 
 // ===== المسارات =====
 
+// @route   GET /api/transactions
+router.get('/', protect, async (req, res) => {
+    try {
+        const transactions = await Transaction.find({ user: req.user.id }).sort({ date: -1 });
+        res.status(200).json({ success: true, data: transactions });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
 // @route   POST /api/transactions
 router.post('/', protect, async (req, res) => {
     try {
@@ -49,7 +60,6 @@ router.post('/', protect, async (req, res) => {
 
         // 3. إرسال البريد الإلكتروني في الخلفية (غير متزامن)
         if (isOverBudget) {
-            // استخدام setImmediate لتجنب حظر الاستجابة
             setImmediate(() => {
                 sendBudgetAlertEmail(user, totalExpenses, monthlyBudget)
                     .then(() => console.log('✅ Email sent successfully'))
@@ -110,7 +120,7 @@ router.delete('/:id', protect, async (req, res) => {
 router.get('/summary', protect, async (req, res) => {
     try {
         const user = await User.findById(req.user.id);
-        const preferredCurrency = user.currency || 'DZD';
+        const preferredCurrency = user.currency || 'USD';
 
         const transactions = await Transaction.find({ user: req.user.id });
 
@@ -122,12 +132,12 @@ router.get('/summary', protect, async (req, res) => {
             .reduce((sum, t) => sum + t.amount, 0);
         const balanceBase = totalIncomeBase - totalExpensesBase;
 
-        const rate = await getExchangeRate('DZD', preferredCurrency);
+        const rate = await getExchangeRate('USD', preferredCurrency);
 
         const totalIncome = totalIncomeBase * rate;
         const totalExpenses = totalExpensesBase * rate;
         const balance = balanceBase * rate;
-        const monthlyBudget = (user.monthlyBudget || 0) * rate;
+        const monthlyBudget = (user.monthlyBudget || 1000) * rate;
 
         const categoryTotalsBase = {};
         transactions
@@ -163,38 +173,5 @@ router.get('/summary', protect, async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 });
-
-// ===== دالة إرسال البريد مع الترجمة =====
-const sendBudgetAlertEmail = async (user, overspentAmount, totalExpenses) => {
-    const lang = user.language || 'ar';
-    const t = emailTranslations[lang] || emailTranslations.ar;
-
-    const currencySymbol = user.currency || 'DZD';
-    const formattedOverspent = overspentAmount.toFixed(2);
-    const formattedTotal = totalExpenses.toFixed(2);
-    const formattedBudget = user.monthlyBudget.toFixed(2);
-
-    const mailOptions = {
-        from: process.env.EMAIL_USER,
-        to: user.email,
-        subject: t.subject,
-        html: `
-            <h2>${t.greeting(user.name)}</h2>
-            <p>${t.body1} <strong>${formattedBudget} ${currencySymbol}</strong>.</p>
-            <p>${t.body2} <strong>${formattedTotal} ${currencySymbol}</strong></p>
-            <p>${t.body3} <strong>${formattedOverspent} ${currencySymbol}</strong></p>
-            <p>${t.advice}</p>
-            <hr>
-            <p>${t.footer}</p>
-        `
-    };
-
-    try {
-        await transporter.sendMail(mailOptions);
-        console.log(`✅ تم إرسال بريد إشعار إلى ${user.email} باللغة ${lang}`);
-    } catch (error) {
-        console.error('❌ فشل إرسال البريد:', error.message);
-    }
-};
 
 module.exports = router;
