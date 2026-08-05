@@ -1105,6 +1105,7 @@ async function init() {
         await loadSettings();
         await loadGoals();
         await loadDashboard();
+        await loadAnalytics();
 
     } else {
         document.getElementById('app').style.display = 'none';
