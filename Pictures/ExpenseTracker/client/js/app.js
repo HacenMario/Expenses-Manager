@@ -992,6 +992,125 @@ function saveTransactionOffline(transaction) {
     console.log('💾 Transaction saved offline');
 }
 
+// ===== تحميل التحليلات =====
+async function loadAnalytics() {
+    try {
+        const res = await fetch(`${API}/analytics/insights`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (data.success) {
+            renderAnalytics(data.data);
+        } else {
+            console.error('Error loading analytics:', data.message);
+        }
+    } catch (err) {
+        console.error('Error loading analytics:', err);
+    }
+}
+
+// ===== عرض التحليلات =====
+function renderAnalytics(analytics) {
+    const container = document.getElementById('analyticsContainer');
+    if (!container) {
+        console.warn('Analytics container not found');
+        return;
+    }
+
+    // 1. عرض التوصيات
+    const insightsHtml = analytics.insights && analytics.insights.length > 0
+        ? analytics.insights.map(i => `
+            <div class="insight-card insight-${i.type}">
+                <div class="insight-header">
+                    <span class="insight-icon">${i.title.split(' ')[0]}</span>
+                    <span class="insight-title">${i.title}</span>
+                </div>
+                <p class="insight-description">${i.description}</p>
+                <div class="insight-action">
+                    <i class="fas fa-lightbulb"></i> ${i.action || 'لا يوجد إجراء مقترح'}
+                </div>
+            </div>
+        `).join('')
+        : `<p style="color: #999;">لا توجد توصيات حالياً</p>`;
+
+    // 2. عرض التنبؤات
+    let predictionsHtml = '';
+    if (analytics.predictions && analytics.predictions.predictions) {
+        predictionsHtml = `
+            <div class="prediction-card">
+                <h4>📊 توقع المصروفات للشهر القادم</h4>
+                <div class="prediction-total">
+                    <span class="prediction-amount">${analytics.predictions.nextMonthTotal.toFixed(0)} DZD</span>
+                    <span class="prediction-confidence">دقة: ${analytics.predictions.confidence.toFixed(0)}%</span>
+                </div>
+                <div class="prediction-trend">
+                    الاتجاه: ${analytics.predictions.trend === 'increasing' ? '📈 صاعد' : '📉 هابط'}
+                </div>
+            </div>
+        `;
+    }
+
+    // 3. عرض الشذوذ
+    let anomaliesHtml = '';
+    if (analytics.anomalies && analytics.anomalies.length > 0) {
+        anomaliesHtml = `
+            <div class="anomalies-card">
+                <h4>🚨 المعاملات غير الطبيعية</h4>
+                ${analytics.anomalies.map(a => `
+                    <div class="anomaly-item">
+                        <span>${a.description}</span>
+                        <span class="anomaly-amount">${a.amount} DZD</span>
+                        <span class="anomaly-reason">${a.reason}</span>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
+
+    // 4. عرض الارتباطات
+    let correlationsHtml = '';
+    if (analytics.correlations && analytics.correlations.length > 0) {
+        correlationsHtml = `
+            <div class="correlations-card">
+                <h4>🔗 العلاقات بين الفئات</h4>
+                ${analytics.correlations.slice(0, 3).map(c => `
+                    <div class="correlation-item">
+                        <span>${c.category1} ↔ ${c.category2}</span>
+                        <span class="correlation-strength">${c.strength}</span>
+                        <span class="correlation-type">${c.type}</span>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
+
+    // 5. عرض الملخص
+    let summaryHtml = '';
+    if (analytics.summary) {
+        summaryHtml = `
+            <div class="summary-card">
+                <h4>📋 ملخص سريع</h4>
+                <div class="summary-grid">
+                    <div><strong>إجمالي المصروفات:</strong> ${analytics.summary.totalExpenses.toFixed(0)} DZD</div>
+                    <div><strong>إجمالي الدخل:</strong> ${analytics.summary.totalIncome.toFixed(0)} DZD</div>
+                    <div><strong>عدد المعاملات:</strong> ${analytics.summary.transactionCount}</div>
+                    <div><strong>متوسط الإنفاق:</strong> ${analytics.summary.averageExpense.toFixed(0)} DZD</div>
+                </div>
+            </div>
+        `;
+    }
+
+    container.innerHTML = `
+        <div class="analytics-grid">
+            <div class="insights-section">${insightsHtml}</div>
+            ${predictionsHtml ? `<div class="predictions-section">${predictionsHtml}</div>` : ''}
+            ${anomaliesHtml ? `<div class="anomalies-section">${anomaliesHtml}</div>` : ''}
+            ${correlationsHtml ? `<div class="correlations-section">${correlationsHtml}</div>` : ''}
+            ${summaryHtml ? `<div class="summary-section">${summaryHtml}</div>` : ''}
+        </div>
+    `;
+}
+
 // ===== التصفية والبحث =====
 function filterTransactions() {
     const search = document.getElementById('searchInput').value.toLowerCase();
