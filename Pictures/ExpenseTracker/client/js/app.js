@@ -1,6 +1,32 @@
+// ===== عنوان API =====
 const API = window.location.hostname === 'localhost' 
     ? 'http://localhost:5000/api' 
     : 'https://expenses-manager-z2up.onrender.com/api';
+
+let token = localStorage.getItem('token');
+let transactions = [];
+let categories = [];
+let goals = [];
+let chartPie = null;
+let chartTrend = null;
+let currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+let editingGoalId = null;
+
+// ===== العملة الثابتة =====
+const CURRENCY = 'DZD';
+
+// ===== أيقونات الفئات الافتراضية (بالمفاتيح الإنجليزية) =====
+const DEFAULT_CATEGORY_ICONS = {
+    'Food': '🍔',
+    'Transport': '🚌',
+    'Books': '📚',
+    'Supplies': '🛒',
+    'Entertainment': '🎮',
+    'Rent': '🏠',
+    'Utilities': '💡',
+    'Healthcare': '🏥',
+    'Other': '📁'
+};
 
 // ===== إدارة وضع Dark Mode =====
 const THEME_KEY = 'theme';
@@ -13,10 +39,12 @@ function applyTheme(theme) {
     
     if (theme === 'dark') {
         document.documentElement.setAttribute('data-theme', 'dark');
-        document.querySelector('#themeToggle i').className = 'fas fa-sun';
+        const toggleIcon = document.querySelector('#themeToggle i');
+        if (toggleIcon) toggleIcon.className = 'fas fa-sun';
     } else {
         document.documentElement.removeAttribute('data-theme');
-        document.querySelector('#themeToggle i').className = 'fas fa-moon';
+        const toggleIcon = document.querySelector('#themeToggle i');
+        if (toggleIcon) toggleIcon.className = 'fas fa-moon';
     }
 }
 
@@ -24,27 +52,21 @@ function applyTheme(theme) {
 function toggleTheme() {
     const newTheme = currentTheme === 'light' ? 'dark' : 'light';
     applyTheme(newTheme);
-    
-    // تحديث ألوان الرسوم البيانية
     updateChartsColors();
 }
 
-// ===== تحديث ألوان الرسوم البيانية حسب الوضع =====
+// ===== تحديث ألوان الرسوم البيانية =====
 function updateChartsColors() {
-    // إعادة إنشاء الرسوم البيانية مع الألوان الجديدة
     if (chartPie) {
         const isDark = currentTheme === 'dark';
         const textColor = isDark ? '#f0f6fc' : '#1a202c';
-        const gridColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
-        
         chartPie.options.plugins.legend.labels.color = textColor;
         chartPie.update();
     }
     if (chartTrend) {
         const isDark = currentTheme === 'dark';
         const textColor = isDark ? '#f0f6fc' : '#1a202c';
-        const gridColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
-        
+        const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
         chartTrend.options.plugins.legend.labels.color = textColor;
         chartTrend.options.scales.x.ticks.color = textColor;
         chartTrend.options.scales.y.ticks.color = textColor;
@@ -60,42 +82,15 @@ function initTheme() {
     applyTheme(savedTheme);
 }
 
-// ===== ربط زر التبديل =====
-document.getElementById('themeToggle').addEventListener('click', toggleTheme);
-
-
-let token = localStorage.getItem('token');
-let transactions = [];
-let categories = [];
-let chartPie = null;
-let chartTrend = null;
-let currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-
-// ===== العملة الثابتة =====
-const CURRENCY = 'DZD';
-
-// ===== أيقونات الفئات الافتراضية =====
-const DEFAULT_CATEGORY_ICONS = {
-    'Food': '🍔',
-    'Transport': '🚌',
-    'Books': '📚',
-    'Supplies': '🛒',
-    'Entertainment': '🎮',
-    'Rent': '🏠',
-    'Utilities': '💡',
-    'Healthcare': '🏥',
-    'Other': '📁'
-};
-
-// ===== استرجاع أيقونة الفئة (تدعم الأسماء المترجمة) =====
+// ===== الحصول على أيقونة الفئة =====
 function getIconForCategory(categoryName) {
-    // 1. البحث في الفئات المخصصة (المستخدم)
+    // 1. البحث في الفئات المخصصة
     const customCat = categories.find(c => c.name === categoryName);
     if (customCat && customCat.icon) {
         return customCat.icon;
     }
     
-    // 2. البحث في الفئات الافتراضية (باستخدام الترجمة العكسية)
+    // 2. البحث في الفئات الافتراضية
     const defaultKeysMap = {
         'طعام': 'Food',
         'مواصلات': 'Transport',
@@ -108,47 +103,26 @@ function getIconForCategory(categoryName) {
         'أخرى': 'Other'
     };
     
-    // نحاول العثور على المفتاح الإنجليزي من الاسم الحالي
-    let engKey = null;
-    
-    // أولاً: نبحث مباشرة في المفاتيح الإنجليزية
     if (DEFAULT_CATEGORY_ICONS[categoryName]) {
         return DEFAULT_CATEGORY_ICONS[categoryName];
     }
     
-    // ثانياً: نبحث في خريطة الترجمة (عربي -> إنجليزي)
     for (const [ar, en] of Object.entries(defaultKeysMap)) {
         if (categoryName === ar || categoryName === en) {
-            engKey = en;
-            break;
-        }
-    }
-    
-    // ثالثاً: نبحث عن الترجمة الحالية في defaultCategories من ملف languages.js
-    if (!engKey) {
-        for (const [en, translated] of Object.entries(t('defaultCategories'))) {
-            if (categoryName === translated) {
-                engKey = en;
-                break;
+            if (DEFAULT_CATEGORY_ICONS[en]) {
+                return DEFAULT_CATEGORY_ICONS[en];
             }
         }
     }
     
-    if (engKey && DEFAULT_CATEGORY_ICONS[engKey]) {
-        return DEFAULT_CATEGORY_ICONS[engKey];
+    for (const [en, translated] of Object.entries(t('defaultCategories'))) {
+        if (categoryName === translated) {
+            if (DEFAULT_CATEGORY_ICONS[en]) {
+                return DEFAULT_CATEGORY_ICONS[en];
+            }
+        }
     }
     
-    return '📁'; // أيقونة افتراضية
-}
-
-function getCategoryIcon(categoryName) {
-    if (DEFAULT_CATEGORY_ICONS[categoryName]) {
-        return DEFAULT_CATEGORY_ICONS[categoryName];
-    }
-    const cat = categories.find(c => c.name === categoryName);
-    if (cat && cat.icon) {
-        return cat.icon;
-    }
     return '📁';
 }
 
@@ -256,16 +230,13 @@ function populateCategorySelects() {
     const currentVal = select.value;
     select.innerHTML = `<option value="">${t('selectCategory')}</option>`;
     
-    // الفئات المخصصة
     categories.forEach(c => {
         select.innerHTML += `<option value="${c.name}">${c.icon || '📁'} ${c.name}</option>`;
     });
     
-    // الفئات الافتراضية مع أيقوناتها
     const defaultKeys = ['Food', 'Transport', 'Books', 'Supplies', 'Entertainment', 'Rent', 'Utilities', 'Healthcare', 'Other'];
     defaultKeys.forEach(key => {
         const translatedName = t(`defaultCategories.${key}`);
-        // نضيفها فقط إذا لم تكن موجودة في الفئات المخصصة
         if (!categories.some(c => c.name === translatedName)) {
             const icon = DEFAULT_CATEGORY_ICONS[key] || '📁';
             select.innerHTML += `<option value="${translatedName}">${icon} ${translatedName}</option>`;
@@ -274,7 +245,6 @@ function populateCategorySelects() {
     
     if (currentVal) select.value = currentVal;
 
-    // نفس الشيء لقائمة التصفية
     const filterSelect = document.getElementById('filterCategory');
     const filterVal = filterSelect.value;
     filterSelect.innerHTML = `<option value="">${t('allCategories')}</option>`;
@@ -359,587 +329,7 @@ async function editCategory(id) {
     } catch { alert('❌ ' + t('serverError')); }
 }
 
-// ===== دوال المعاملات =====
-async function loadTransactions() {
-    try {
-        const res = await fetch(`${API}/transactions`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const data = await res.json();
-        if (data.success) {
-            transactions = data.data;
-            renderTransactions(transactions);
-        }
-    } catch (err) { console.error('خطأ في تحميل المعاملات', err); }
-}
-
-// ===== تحميل الملخص (مع تحديث التحذير) =====
-async function loadSummary() {
-    try {
-        const res = await fetch(`${API}/transactions/summary`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const data = await res.json();
-        if (data.success) {
-            const summary = data.data;
-            document.getElementById('totalIncome').textContent = summary.totalIncome.toFixed(0) + ' ' + CURRENCY;
-            document.getElementById('totalExpenses').textContent = summary.totalExpenses.toFixed(0) + ' ' + CURRENCY;
-            document.getElementById('remainingBudget').textContent = summary.remainingBudget.toFixed(0) + ' ' + CURRENCY;
-            document.getElementById('monthlyBudgetDisplay').textContent = summary.monthlyBudget.toFixed(0) + ' ' + CURRENCY;
-            document.getElementById('transactionCount').textContent = summary.transactionCount;
-
-            // ===== تحديث شريط تقدم الميزانية (إضافة جديدة) =====
-            updateBudgetProgress(summary);
-
-            // تحديث التحذير (هام)
-            checkBudgetAlert(summary);
-            // تحديث الرسوم البيانية
-            updateCharts(summary.categoryTotals, transactions);
-        } else {
-            console.error('Error in summary:', data.message);
-        }
-    } catch (err) {
-        console.error('Error loading summary:', err);
-    }
-}
-
-// ===== تحديث شريط تقدم الميزانية =====
-function updateBudgetProgress(summaryData) {
-    const { totalExpenses, monthlyBudget } = summaryData;
-    const isDark = currentTheme === 'dark';
-
-    // ===== تحديث الأرقام =====
-    document.getElementById('spentAmount').textContent = totalExpenses.toFixed(0) + ' ' + CURRENCY;
-    document.getElementById('budgetAmount').textContent = monthlyBudget.toFixed(0) + ' ' + CURRENCY;
-
-    // ===== حساب النسبة المئوية =====
-    let percentage = 0;
-    if (monthlyBudget > 0) {
-        percentage = Math.min((totalExpenses / monthlyBudget) * 100, 100);
-    }
-    percentage = Math.round(percentage);
-
-    // ===== تحديث النسبة المعروضة =====
-    document.getElementById('budgetPercentage').textContent = percentage + '%';
-
-    // ===== تحديث شريط التقدم =====
-    const progressBar = document.getElementById('budgetProgressBar');
-    const progressText = document.getElementById('progressBarText');
-    const statusDiv = document.getElementById('progressStatus');
-
-    progressBar.style.width = percentage + '%';
-    progressText.textContent = percentage + '%';
-
-    // ===== تحديد اللون حسب النسبة والوضع =====
-    let barColor;
-    let statusClass;
-    let statusIcon;
-    let statusMessage;
-
-    if (percentage < 70) {
-        barColor = isDark ? '#4ade80' : '#48bb78';
-        statusClass = 'progress-status';
-        statusIcon = 'fa-check-circle';
-        statusMessage = t('budgetStatusSafe') || 'ضمن الميزانية';
-    } else if (percentage < 90) {
-        barColor = isDark ? '#fbbf24' : '#f6ad55';
-        statusClass = 'progress-status warning';
-        statusIcon = 'fa-exclamation-triangle';
-        statusMessage = t('budgetStatusWarning') || 'اقتربت من الحد الأقصى';
-    } else {
-        barColor = isDark ? '#f87171' : '#fc8181';
-        statusClass = 'progress-status danger';
-        statusIcon = 'fa-times-circle';
-        statusMessage = t('budgetStatusDanger') || 'تجاوزت الميزانية!';
-    }
-
-    // ===== تطبيق اللون على الشريط =====
-    progressBar.style.background = `linear-gradient(90deg, ${barColor}, ${barColor}dd)`;
-    progressBar.classList.remove('low', 'medium', 'high');
-    
-    // ===== تحديث الحالة =====
-    statusDiv.className = statusClass;
-    statusDiv.innerHTML = `<i class="fas ${statusIcon}"></i> <span>${statusMessage}</span>`;
-}
-
-// ===== التحقق من الميزانية (مع تحديث واجهة التحذير) =====
-function checkBudgetAlert(summaryData) {
-    const alertDiv = document.getElementById('budgetAlert');
-    const alertMsg = document.getElementById('budgetAlertMessage');
-    const { totalExpenses, monthlyBudget, isOverBudget } = summaryData;
-
-    if (isOverBudget) {
-        const overspent = (totalExpenses - monthlyBudget).toFixed(0);
-        alertDiv.style.display = 'flex';
-        alertDiv.className = 'budget-alert danger';
-        alertMsg.textContent = t('overBudgetAlert', { amount: overspent + ' ' + CURRENCY });
-    } else {
-        const remaining = (monthlyBudget - totalExpenses).toFixed(0);
-        if (remaining < monthlyBudget * 0.2) {
-            alertDiv.style.display = 'flex';
-            alertDiv.className = 'budget-alert warning';
-            alertMsg.textContent = t('budgetWarning', { amount: remaining + ' ' + CURRENCY });
-        } else {
-            alertDiv.style.display = 'none';
-        }
-    }
-}
-
-// ===== تحديث الميزانية =====
-async function updateBudget() {
-    const current = document.getElementById('monthlyBudgetDisplay').textContent;
-    const newBudget = prompt('أدخل الميزانية الشهرية الجديدة:', current);
-    if (newBudget === null) return;
-    if (newBudget.trim() === '' || isNaN(parseFloat(newBudget)) || parseFloat(newBudget) < 0) {
-        return alert(t('enterValidNumber'));
-    }
-    const val = parseFloat(newBudget);
-    try {
-        const res = await fetch(`${API}/auth/settings`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ monthlyBudget: val })
-        });
-        const data = await res.json();
-        if (data.success) {
-            document.getElementById('monthlyBudgetDisplay').textContent = val.toFixed(0) + ' ' + CURRENCY;
-            const user = JSON.parse(localStorage.getItem('user') || '{}');
-            user.monthlyBudget = val;
-            localStorage.setItem('user', JSON.stringify(user));
-            loadSummary();
-            alert(t('budgetUpdated'));
-        } else {
-            alert('❌ ' + data.message);
-        }
-    } catch { alert('❌ ' + t('serverError')); }
-}
-
-// ===== إضافة معاملة =====
-async function addTransaction(e) {
-    e.preventDefault();
-    const desc = document.getElementById('desc').value.trim();
-    const amount = parseFloat(document.getElementById('amount').value);
-    const category = document.getElementById('category').value;
-    const type = document.getElementById('type').value;
-    if (!desc || !amount || !category) return alert(t('fillAllFields'));
-
-    // تعطيل الزر مؤقتاً لمنع النقر المتكرر
-    const submitBtn = document.querySelector('#transactionForm button[type="submit"]');
-    const originalText = submitBtn.innerHTML;
-    submitBtn.disabled = true;
-    submitBtn.innerHTML = '⏳ جاري الإضافة...';
-
-    try {
-        const res = await fetch(`${API}/transactions`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ description: desc, amount, category, type })
-        });
-
-        // قراءة الرد (حتى لو كان خطأ)
-        const result = await res.json();
-
-        if (result.success) {
-            // إعادة تعيين النموذج
-            document.getElementById('transactionForm').reset();
-
-            // تحديث البيانات (الجدول، الإحصائيات، التحذير)
-            await loadTransactions();
-            await loadSummary();
-
-            // عرض تحذير فوري إذا تم التجاوز
-            if (result.isOverBudget) {
-                const overspent = (result.totalExpenses - result.monthlyBudget).toFixed(0);
-                const msg = t('overBudgetToast', {
-                    budget: result.monthlyBudget.toFixed(0) + ' ' + CURRENCY,
-                    amount: overspent + ' ' + CURRENCY
-                });
-                alert('⚠️ ' + msg);
-                // تحديث التحذير في الصفحة (ستقوم loadSummary بالاتصال بـ checkBudgetAlert)
-            }
-        } else {
-            alert('❌ ' + (result.message || t('serverError')));
-        }
-    } catch (error) {
-        console.error('Error adding transaction:', error);
-        alert('❌ ' + t('serverError'));
-    } finally {
-        // إعادة تمكين الزر
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = originalText;
-    }
-}
-
-async function deleteTransaction(id) {
-    if (!confirm(t('deleteConfirm'))) return;
-    try {
-        const res = await fetch(`${API}/transactions/${id}`, {
-            method: 'DELETE',
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const data = await res.json();
-        if (data.success) {
-            await loadTransactions();
-            await loadSummary();
-        } else alert('❌ ' + data.message);
-    } catch { alert('❌ ' + t('serverError')); }
-}
-
-// ===== عرض الجدول =====
-function renderTransactions(list) {
-    const tbody = document.getElementById('transactionsBody');
-    if (!list || list.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">${t('noTransactions')}</td></tr>`;
-        return;
-    }
-
-    tbody.innerHTML = list.map(tx => {
-        const icon = getIconForCategory(tx.category);
-        let displayName = tx.category;
-        
-        // ترجمة اسم الفئة إذا كانت افتراضية
-        const defaultKeysMap = {
-            'طعام': 'Food',
-            'مواصلات': 'Transport',
-            'كتب': 'Books',
-            'مستلزمات': 'Supplies',
-            'ترفيه': 'Entertainment',
-            'إيجار': 'Rent',
-            'فواتير': 'Utilities',
-            'صحة': 'Healthcare',
-            'أخرى': 'Other'
-        };
-        let engKey = null;
-        for (const [ar, en] of Object.entries(defaultKeysMap)) {
-            if (tx.category === ar || tx.category === en) {
-                engKey = en;
-                break;
-            }
-        }
-        // إذا لم نجد، نبحث في الترجمة الحالية
-        if (!engKey) {
-            for (const [en, translated] of Object.entries(t('defaultCategories'))) {
-                if (tx.category === translated) {
-                    engKey = en;
-                    break;
-                }
-            }
-        }
-        if (engKey) {
-            displayName = t(`defaultCategories.${engKey}`);
-        }
-
-        return `
-        <tr>
-            <td>${tx.description}</td>
-            <td style="color:${tx.type === 'income' ? '#48bb78' : '#fc8181'};font-weight:600;">
-                ${tx.type === 'income' ? '+' : '-'} ${tx.amount.toFixed(0)} ${CURRENCY}
-            </td>
-            <td>${icon} ${displayName}</td>
-            <td>${tx.type === 'income' ? '💰 ' + t('income') : '💸 ' + t('expense')}</td>
-            <td>${formatDate(tx.date)}</td>
-            <td>
-                <button class="btn btn-delete" onclick="deleteTransaction('${tx._id}')"><i class="fas fa-trash"></i></button>
-            </td>
-        </tr>
-        `;
-    }).join('');
-}
-
-function formatDate(dateStr) {
-    const d = new Date(dateStr);
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    const hours = String(d.getHours()).padStart(2, '0');
-    const mins = String(d.getMinutes()).padStart(2, '0');
-    return `${year}/${month}/${day} ${hours}:${mins}`;
-}
-
-// ===== الرسوم البيانية =====
-function updateCharts(categoryTotals, allTransactions) {
-    // ===== تحديد ألوان الوضع الحالي (Light/Dark) =====
-    const isDark = currentTheme === 'dark';
-    const textColor = isDark ? '#f0f6fc' : '#1a202c';
-    const gridColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
-    const borderColor = isDark ? '#2d3748' : '#ffffff';
-
-    // ===== 1. الرسم البياني الدائري (Doughnut Chart) =====
-    const ctxPie = document.getElementById('expenseChart').getContext('2d');
-    if (chartPie) chartPie.destroy();
-
-    const catNames = Object.keys(categoryTotals);
-    const catValues = Object.values(categoryTotals);
-
-    if (catNames.length > 0) {
-        // ترجمة أسماء الفئات
-        const translatedLabels = catNames.map(name => {
-            const defaultKeysMap = {
-                'طعام': 'Food',
-                'مواصلات': 'Transport',
-                'كتب': 'Books',
-                'مستلزمات': 'Supplies',
-                'ترفيه': 'Entertainment',
-                'إيجار': 'Rent',
-                'فواتير': 'Utilities',
-                'صحة': 'Healthcare',
-                'أخرى': 'Other'
-            };
-            let engKey = null;
-            for (const [ar, en] of Object.entries(defaultKeysMap)) {
-                if (name === ar || name === en) {
-                    engKey = en;
-                    break;
-                }
-            }
-            if (!engKey) {
-                for (const [en, translated] of Object.entries(t('defaultCategories'))) {
-                    if (name === translated) {
-                        engKey = en;
-                        break;
-                    }
-                }
-            }
-            if (engKey) {
-                return t(`defaultCategories.${engKey}`);
-            }
-            return name;
-        });
-
-        // ألوان متوافقة مع الوضع
-        const colors = isDark 
-            ? ['#7c8cf0', '#4ade80', '#f87171', '#fbbf24', '#60a5fa', '#a78bfa', '#f472b6', '#34d399', '#fb923c']
-            : ['#667eea', '#48bb78', '#fc8181', '#f6ad55', '#68d391', '#9f7aea', '#f687b3', '#4fd1c5', '#ed8936'];
-
-        chartPie = new Chart(ctxPie, {
-            type: 'doughnut',
-            data: {
-                labels: translatedLabels,
-                datasets: [{
-                    data: catValues,
-                    backgroundColor: colors.slice(0, catNames.length),
-                    borderWidth: 2,
-                    borderColor: borderColor
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            color: textColor,
-                            font: { size: 13 },
-                            padding: 15,
-                            usePointStyle: true,
-                            pointStyle: 'circle'
-                        }
-                    }
-                }
-            }
-        });
-    }
-
-    // ===== 2. الرسم البياني الخطي (Trend Chart) =====
-    const ctxTrend = document.getElementById('trendChart').getContext('2d');
-    if (chartTrend) chartTrend.destroy();
-
-    // حساب بيانات آخر 7 أيام
-    const today = new Date();
-    const last7 = [];
-    for (let i = 6; i >= 0; i--) {
-        const d = new Date(today);
-        d.setDate(d.getDate() - i);
-        last7.push(d.toISOString().split('T')[0]);
-    }
-
-    const dailyTotals = last7.map(date => {
-        const total = allTransactions
-            .filter(t => t.type === 'expense' && t.date.startsWith(date))
-            .reduce((sum, t) => sum + t.amount, 0);
-        return total;
-    });
-
-    const labels = last7.map(d => {
-        const parts = d.split('-');
-        return `${parts[1]}/${parts[2]}`;
-    });
-
-    chartTrend = new Chart(ctxTrend, {
-        type: 'line',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: t('dailyExpenses') || 'المصروفات اليومية',
-                data: dailyTotals,
-                borderColor: isDark ? '#f87171' : '#fc8181',
-                backgroundColor: isDark ? 'rgba(248, 113, 113, 0.15)' : 'rgba(252, 129, 129, 0.1)',
-                tension: 0.3,
-                fill: true,
-                pointBackgroundColor: isDark ? '#f87171' : '#fc8181',
-                pointBorderColor: isDark ? '#f87171' : '#fc8181',
-                pointRadius: 4,
-                pointHoverRadius: 6
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: {
-                    display: true,
-                    position: 'top',
-                    labels: {
-                        color: textColor,
-                        font: { size: 13 }
-                    }
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        color: textColor,
-                        font: { size: 12 }
-                    },
-                    grid: {
-                        color: gridColor,
-                        drawBorder: false
-                    }
-                },
-                x: {
-                    ticks: {
-                        color: textColor,
-                        font: { size: 12 }
-                    },
-                    grid: {
-                        color: gridColor,
-                        drawBorder: false
-                    }
-                }
-            }
-        }
-    });
-}
-
-// ===== تصدير CSV =====
-function exportCSV() {
-    if (!transactions.length) return alert(t('noDataToExport'));
-    const BOM = '\uFEFF';
-    let csv = BOM + `${t('description')},${t('amount')},${t('category')},${t('type')},${t('date')}\n`;
-    transactions.forEach(tx => {
-        const date = formatDate(tx.date);
-        const type = tx.type === 'income' ? t('income') : t('expense');
-        csv += `"${tx.description}",${tx.amount.toFixed(0)},"${tx.category}","${type}","${date}"\n`;
-    });
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `transactions_${new Date().toISOString().split('T')[0]}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-}
-
-// ===== التصفية والبحث =====
-function filterTransactions() {
-    const search = document.getElementById('searchInput').value.toLowerCase();
-    const category = document.getElementById('filterCategory').value;
-    const type = document.getElementById('filterType').value;
-    let filtered = transactions;
-    if (search) {
-        filtered = filtered.filter(t => 
-            t.description.toLowerCase().includes(search) ||
-            (t.notes && t.notes.toLowerCase().includes(search))
-        );
-    }
-    if (category) filtered = filtered.filter(t => t.category === category);
-    if (type) filtered = filtered.filter(t => t.type === type);
-    renderTransactions(filtered);
-}
-
-// ===== تغيير اللغة =====
-function changeLanguage(lang) {
-    // حفظ اللغة في localStorage
-    setLang(lang);
-    
-    // تغيير اتجاه الصفحة حسب اللغة
-    const html = document.documentElement;
-    if (lang === 'ar') {
-        html.setAttribute('dir', 'rtl');
-        html.setAttribute('lang', 'ar');
-    } else {
-        html.setAttribute('dir', 'ltr');
-        html.setAttribute('lang', lang);
-    }
-    
-    // حفظ اللغة في localStorage للمستخدم (إذا كان مسجلاً)
-    if (token) {
-        updateUserLanguage(lang);
-    }
-    
-    // إعادة تحميل الصفحة لتطبيق جميع التغييرات
-    window.location.reload();
-}
-
-// ===== تحميل الإعدادات =====
-async function loadSettings() {
-    try {
-        const res = await fetch(`${API}/auth/settings`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const data = await res.json();
-        if (data.success) {
-            const settings = data.data;
-            document.getElementById('monthlyBudgetDisplay').textContent = settings.monthlyBudget.toFixed(0) + ' ' + CURRENCY;
-            if (settings.language && settings.language !== currentLang) {
-                setLang(settings.language);
-                document.getElementById('langSelector').value = settings.language;
-                changeLanguage(settings.language);
-            }
-        } else {
-            console.error('Error loading settings:', data.message);
-        }
-    } catch (error) {
-        console.error('Error loading settings:', error);
-    }
-}
-
-// ===== تحديث لغة المستخدم على الخادم =====
-async function updateUserLanguage(lang) {
-    try {
-        const res = await fetch(`${API}/auth/language`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ language: lang })
-        });
-        const data = await res.json();
-        if (data.success) {
-            const user = JSON.parse(localStorage.getItem('user') || '{}');
-            user.language = lang;
-            localStorage.setItem('user', JSON.stringify(user));
-            console.log(`✅ تم تحديث اللغة على الخادم إلى ${lang}`);
-        } else {
-            console.error('❌ فشل تحديث اللغة:', data.message);
-        }
-    } catch (error) {
-        console.error('❌ خطأ في تحديث اللغة:', error);
-    }
-}
-
-// ===== متغيرات الأهداف =====
-let goals = [];
-let editingGoalId = null;
-
-// ===== تحميل الأهداف =====
+// ===== دوال أهداف الادخار =====
 async function loadGoals() {
     try {
         const res = await fetch(`${API}/goals`, {
@@ -955,9 +345,9 @@ async function loadGoals() {
     }
 }
 
-// ===== عرض الأهداف =====
 function renderGoals() {
     const container = document.getElementById('goalsList');
+    if (!container) return;
     if (!goals.length) {
         container.innerHTML = `<p style="grid-column:1/-1;text-align:center;color:#999;">${t('noGoals') || 'لا توجد أهداف'}</p>`;
         return;
@@ -1003,7 +393,6 @@ function renderGoals() {
     }).join('');
 }
 
-// ===== إضافة مبلغ إلى الهدف =====
 async function addToGoal(goalId) {
     const amount = prompt(t('enterAmount') || 'أدخل المبلغ المراد إضافته:');
     if (amount === null) return;
@@ -1033,7 +422,6 @@ async function addToGoal(goalId) {
     } catch { alert('❌ ' + t('serverError')); }
 }
 
-// ===== إنشاء هدف جديد =====
 async function createGoal(e) {
     e.preventDefault();
     const name = document.getElementById('goalName').value.trim();
@@ -1067,7 +455,6 @@ async function createGoal(e) {
     } catch { alert('❌ ' + t('serverError')); }
 }
 
-// ===== تعديل هدف =====
 async function editGoal(goalId) {
     const goal = goals.find(g => g._id === goalId);
     if (!goal) return;
@@ -1081,7 +468,6 @@ async function editGoal(goalId) {
     document.getElementById('goalModal').style.display = 'flex';
 }
 
-// ===== حذف هدف =====
 async function deleteGoal(goalId) {
     if (!confirm(t('deleteConfirm') || 'هل أنت متأكد من حذف هذا الهدف؟')) return;
     try {
@@ -1098,7 +484,6 @@ async function deleteGoal(goalId) {
     } catch { alert('❌ ' + t('serverError')); }
 }
 
-// ===== فتح/إغلاق النافذة المنبثقة =====
 function openGoalModal() {
     document.getElementById('goalForm').reset();
     editingGoalId = null;
@@ -1109,56 +494,586 @@ function closeGoalModal() {
     document.getElementById('goalModal').style.display = 'none';
 }
 
-// ===== ربط الأحداث =====
-document.getElementById('addGoalBtn').addEventListener('click', openGoalModal);
-document.getElementById('closeGoalModal').addEventListener('click', closeGoalModal);
-document.getElementById('goalForm').addEventListener('submit', createGoal);
-window.addEventListener('click', (e) => {
-    if (e.target === document.getElementById('goalModal')) closeGoalModal();
-});
+// ===== دوال المعاملات =====
+async function loadTransactions() {
+    try {
+        const res = await fetch(`${API}/transactions`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (data.success) {
+            transactions = data.data;
+            renderTransactions(transactions);
+        }
+    } catch (err) { console.error('خطأ في تحميل المعاملات', err); }
+}
 
-// ===== تهيئة التطبيق =====
+async function loadSummary() {
+    try {
+        const res = await fetch(`${API}/transactions/summary`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (data.success) {
+            const summary = data.data;
+            document.getElementById('totalIncome').textContent = summary.totalIncome.toFixed(0) + ' ' + CURRENCY;
+            document.getElementById('totalExpenses').textContent = summary.totalExpenses.toFixed(0) + ' ' + CURRENCY;
+            document.getElementById('remainingBudget').textContent = summary.remainingBudget.toFixed(0) + ' ' + CURRENCY;
+            document.getElementById('monthlyBudgetDisplay').textContent = summary.monthlyBudget.toFixed(0) + ' ' + CURRENCY;
+            document.getElementById('transactionCount').textContent = summary.transactionCount;
+
+            // تحديث شريط تقدم الميزانية
+            updateBudgetProgress(summary);
+
+            // تحديث التحذير
+            checkBudgetAlert(summary);
+            // تحديث الرسوم البيانية
+            updateCharts(summary.categoryTotals, transactions);
+        } else {
+            console.error('Error in summary:', data.message);
+        }
+    } catch (err) {
+        console.error('Error loading summary:', err);
+    }
+}
+
+function checkBudgetAlert(summaryData) {
+    const alertDiv = document.getElementById('budgetAlert');
+    const alertMsg = document.getElementById('budgetAlertMessage');
+    if (!alertDiv || !alertMsg) return;
+    const { totalExpenses, monthlyBudget, isOverBudget } = summaryData;
+
+    if (isOverBudget) {
+        const overspent = (totalExpenses - monthlyBudget).toFixed(0);
+        alertDiv.style.display = 'flex';
+        alertDiv.className = 'budget-alert danger';
+        alertMsg.textContent = t('overBudgetAlert', { amount: overspent + ' ' + CURRENCY });
+    } else {
+        const remaining = (monthlyBudget - totalExpenses).toFixed(0);
+        if (remaining < monthlyBudget * 0.2) {
+            alertDiv.style.display = 'flex';
+            alertDiv.className = 'budget-alert warning';
+            alertMsg.textContent = t('budgetWarning', { amount: remaining + ' ' + CURRENCY });
+        } else {
+            alertDiv.style.display = 'none';
+        }
+    }
+}
+
+async function updateBudget() {
+    const current = document.getElementById('monthlyBudgetDisplay').textContent;
+    const newBudget = prompt('أدخل الميزانية الشهرية الجديدة:', current);
+    if (newBudget === null) return;
+    if (newBudget.trim() === '' || isNaN(parseFloat(newBudget)) || parseFloat(newBudget) < 0) {
+        return alert(t('enterValidNumber'));
+    }
+    const val = parseFloat(newBudget);
+    try {
+        const res = await fetch(`${API}/auth/settings`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ monthlyBudget: val })
+        });
+        const data = await res.json();
+        if (data.success) {
+            document.getElementById('monthlyBudgetDisplay').textContent = val.toFixed(0) + ' ' + CURRENCY;
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            user.monthlyBudget = val;
+            localStorage.setItem('user', JSON.stringify(user));
+            loadSummary();
+            alert(t('budgetUpdated'));
+        } else {
+            alert('❌ ' + data.message);
+        }
+    } catch { alert('❌ ' + t('serverError')); }
+}
+
+async function addTransaction(e) {
+    e.preventDefault();
+    const desc = document.getElementById('desc').value.trim();
+    const amount = parseFloat(document.getElementById('amount').value);
+    const category = document.getElementById('category').value;
+    const type = document.getElementById('type').value;
+    if (!desc || !amount || !category) return alert(t('fillAllFields'));
+
+    const submitBtn = document.querySelector('#transactionForm button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '⏳ جاري الإضافة...';
+
+    try {
+        const res = await fetch(`${API}/transactions`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ description: desc, amount, category, type })
+        });
+        const result = await res.json();
+        if (result.success) {
+            document.getElementById('transactionForm').reset();
+            await loadTransactions();
+            await loadSummary();
+            if (result.isOverBudget) {
+                const overspent = (result.totalExpenses - result.monthlyBudget).toFixed(0);
+                alert(t('overBudgetToast', { 
+                    budget: result.monthlyBudget.toFixed(0) + ' ' + CURRENCY, 
+                    amount: overspent + ' ' + CURRENCY 
+                }));
+            }
+        } else {
+            alert('❌ ' + result.message);
+        }
+    } catch { alert('❌ ' + t('serverError')); }
+    finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+    }
+}
+
+async function deleteTransaction(id) {
+    if (!confirm(t('deleteConfirm'))) return;
+    try {
+        const res = await fetch(`${API}/transactions/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (data.success) {
+            await loadTransactions();
+            await loadSummary();
+        } else alert('❌ ' + data.message);
+    } catch { alert('❌ ' + t('serverError')); }
+}
+
+function renderTransactions(list) {
+    const tbody = document.getElementById('transactionsBody');
+    if (!tbody) return;
+    if (!list || list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">${t('noTransactions')}</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = list.map(tx => {
+        const icon = getIconForCategory(tx.category);
+        let displayName = tx.category;
+        const defaultKeysMap = {
+            'طعام': 'Food',
+            'مواصلات': 'Transport',
+            'كتب': 'Books',
+            'مستلزمات': 'Supplies',
+            'ترفيه': 'Entertainment',
+            'إيجار': 'Rent',
+            'فواتير': 'Utilities',
+            'صحة': 'Healthcare',
+            'أخرى': 'Other'
+        };
+        let engKey = null;
+        for (const [ar, en] of Object.entries(defaultKeysMap)) {
+            if (tx.category === ar || tx.category === en) {
+                engKey = en;
+                break;
+            }
+        }
+        if (!engKey) {
+            for (const [en, translated] of Object.entries(t('defaultCategories'))) {
+                if (tx.category === translated) {
+                    engKey = en;
+                    break;
+                }
+            }
+        }
+        if (engKey) {
+            displayName = t(`defaultCategories.${engKey}`);
+        }
+
+        return `
+        <tr>
+            <td>${tx.description}</td>
+            <td style="color:${tx.type === 'income' ? '#48bb78' : '#fc8181'};font-weight:600;">
+                ${tx.type === 'income' ? '+' : '-'} ${tx.amount.toFixed(0)} ${CURRENCY}
+            </td>
+            <td>${icon} ${displayName}</td>
+            <td>${tx.type === 'income' ? '💰 ' + t('income') : '💸 ' + t('expense')}</td>
+            <td>${formatDate(tx.date)}</td>
+            <td>
+                <button class="btn btn-delete" onclick="deleteTransaction('${tx._id}')"><i class="fas fa-trash"></i></button>
+            </td>
+        </tr>
+        `;
+    }).join('');
+}
+
+function formatDate(dateStr) {
+    const d = new Date(dateStr);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const hours = String(d.getHours()).padStart(2, '0');
+    const mins = String(d.getMinutes()).padStart(2, '0');
+    return `${year}/${month}/${day} ${hours}:${mins}`;
+}
+
+// ===== دالة updateCharts الكاملة =====
+function updateCharts(categoryTotals, allTransactions) {
+    const isDark = currentTheme === 'dark';
+    const textColor = isDark ? '#f0f6fc' : '#1a202c';
+    const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
+    const borderColor = isDark ? '#30363d' : '#e2e8f0';
+    
+    // الرسم البياني الدائري
+    const ctxPie = document.getElementById('expenseChart').getContext('2d');
+    if (chartPie) chartPie.destroy();
+
+    const catNames = Object.keys(categoryTotals);
+    const catValues = Object.values(categoryTotals);
+
+    if (catNames.length > 0) {
+        const translatedLabels = catNames.map(name => {
+            const defaultKeys = {
+                'طعام': 'Food',
+                'مواصلات': 'Transport',
+                'كتب': 'Books',
+                'مستلزمات': 'Supplies',
+                'ترفيه': 'Entertainment',
+                'إيجار': 'Rent',
+                'فواتير': 'Utilities',
+                'صحة': 'Healthcare',
+                'أخرى': 'Other'
+            };
+            let engKey = null;
+            for (const [ar, en] of Object.entries(defaultKeys)) {
+                if (name === ar || name === en) {
+                    engKey = en;
+                    break;
+                }
+            }
+            if (!engKey) {
+                for (const [en, translated] of Object.entries(t('defaultCategories'))) {
+                    if (name === translated) {
+                        engKey = en;
+                        break;
+                    }
+                }
+            }
+            const icon = getIconForCategory(name);
+            const displayName = engKey ? t(`defaultCategories.${engKey}`) : name;
+            return `${icon} ${displayName}`;
+        });
+
+        const lightColors = ['#667eea', '#48bb78', '#fc8181', '#f6ad55', '#68d391', '#9f7aea', '#f687b3', '#4fd1c5', '#ed8936'];
+        const darkColors = ['#7c8cf0', '#4ade80', '#f87171', '#fbbf24', '#60a5fa', '#a78bfa', '#f472b6', '#34d399', '#fb923c'];
+        const colors = isDark ? darkColors : lightColors;
+
+        chartPie = new Chart(ctxPie, {
+            type: 'doughnut',
+            data: {
+                labels: translatedLabels,
+                datasets: [{
+                    data: catValues,
+                    backgroundColor: colors.slice(0, catNames.length),
+                    borderWidth: 2,
+                    borderColor: isDark ? '#1c2333' : '#ffffff'
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: textColor,
+                            font: { size: 13 },
+                            padding: 15,
+                            usePointStyle: true,
+                            pointStyle: 'circle'
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // الرسم البياني الخطي
+    const ctxTrend = document.getElementById('trendChart').getContext('2d');
+    if (chartTrend) chartTrend.destroy();
+
+    const today = new Date();
+    const last7 = [];
+    for (let i = 6; i >= 0; i--) {
+        const d = new Date(today);
+        d.setDate(d.getDate() - i);
+        last7.push(d.toISOString().split('T')[0]);
+    }
+
+    const dailyTotals = last7.map(date => {
+        const total = allTransactions
+            .filter(t => t.type === 'expense' && t.date.startsWith(date))
+            .reduce((sum, t) => sum + t.amount, 0);
+        return total;
+    });
+
+    const labels = last7.map(d => {
+        const parts = d.split('-');
+        return `${parts[2]}/${parts[1]}`;
+    });
+
+    chartTrend = new Chart(ctxTrend, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: t('dailyExpenses') || 'المصروفات اليومية',
+                data: dailyTotals,
+                borderColor: isDark ? '#f87171' : '#fc8181',
+                backgroundColor: isDark ? 'rgba(248, 113, 113, 0.15)' : 'rgba(252, 129, 129, 0.1)',
+                tension: 0.3,
+                fill: true,
+                pointBackgroundColor: isDark ? '#f87171' : '#fc8181',
+                pointBorderColor: isDark ? '#f87171' : '#fc8181',
+                pointRadius: 4,
+                borderWidth: 2.5
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top',
+                    labels: {
+                        color: textColor,
+                        font: { size: 13 },
+                        boxWidth: 20,
+                        padding: 15
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { color: textColor, font: { size: 12 } },
+                    grid: { color: gridColor, drawBorder: false }
+                },
+                x: {
+                    ticks: { color: textColor, font: { size: 12 } },
+                    grid: { color: gridColor, drawBorder: false }
+                }
+            }
+        }
+    });
+}
+
+// ===== تحديث شريط تقدم الميزانية =====
+function updateBudgetProgress(summaryData) {
+    const { totalExpenses, monthlyBudget } = summaryData;
+    const isDark = currentTheme === 'dark';
+
+    const spentElement = document.getElementById('spentAmount');
+    const budgetElement = document.getElementById('budgetAmount');
+    if (spentElement) spentElement.textContent = totalExpenses.toFixed(0) + ' ' + CURRENCY;
+    if (budgetElement) budgetElement.textContent = monthlyBudget.toFixed(0) + ' ' + CURRENCY;
+
+    let percentage = 0;
+    if (monthlyBudget > 0) {
+        percentage = Math.min((totalExpenses / monthlyBudget) * 100, 100);
+    }
+    percentage = Math.round(percentage);
+
+    const percentageElement = document.getElementById('budgetPercentage');
+    if (percentageElement) percentageElement.textContent = percentage + '%';
+
+    const progressBar = document.getElementById('budgetProgressBar');
+    const progressText = document.getElementById('progressBarText');
+    const statusDiv = document.getElementById('progressStatus');
+
+    if (progressBar) {
+        progressBar.style.width = percentage + '%';
+        progressBar.classList.remove('low', 'medium', 'high');
+        
+        let barColor = '#48bb78';
+        if (percentage >= 90) {
+            barColor = isDark ? '#f87171' : '#fc8181';
+            progressBar.classList.add('high');
+        } else if (percentage >= 70) {
+            barColor = isDark ? '#fbbf24' : '#f6ad55';
+            progressBar.classList.add('medium');
+        } else {
+            progressBar.classList.add('low');
+        }
+        progressBar.style.background = `linear-gradient(90deg, ${barColor}, ${barColor}dd)`;
+    }
+
+    if (progressText) progressText.textContent = percentage + '%';
+
+    if (statusDiv) {
+        let statusClass = '';
+        let statusIcon = 'fa-check-circle';
+        let statusMessage = t('budgetStatusSafe') || 'ضمن الميزانية';
+        
+        if (percentage >= 90) {
+            statusClass = 'danger';
+            statusIcon = 'fa-times-circle';
+            statusMessage = t('budgetStatusDanger') || 'تجاوزت الميزانية!';
+        } else if (percentage >= 70) {
+            statusClass = 'warning';
+            statusIcon = 'fa-exclamation-triangle';
+            statusMessage = t('budgetStatusWarning') || 'اقتربت من الحد الأقصى';
+        }
+        
+        statusDiv.className = 'progress-status' + (statusClass ? ' ' + statusClass : '');
+        statusDiv.innerHTML = `<i class="fas ${statusIcon}"></i> <span>${statusMessage}</span>`;
+    }
+}
+
+// ===== دوال الإعدادات =====
+async function loadSettings() {
+    try {
+        const res = await fetch(`${API}/auth/settings`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (data.success) {
+            const settings = data.data;
+            document.getElementById('monthlyBudgetDisplay').textContent = settings.monthlyBudget.toFixed(0) + ' ' + CURRENCY;
+            if (settings.language && settings.language !== currentLang) {
+                setLang(settings.language);
+                document.getElementById('langSelector').value = settings.language;
+                changeLanguage(settings.language);
+            }
+        } else {
+            console.error('Error loading settings:', data.message);
+        }
+    } catch (error) {
+        console.error('Error loading settings:', error);
+    }
+}
+
+async function updateUserLanguage(lang) {
+    try {
+        const res = await fetch(`${API}/auth/language`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ language: lang })
+        });
+        const data = await res.json();
+        if (data.success) {
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            user.language = lang;
+            localStorage.setItem('user', JSON.stringify(user));
+            console.log(`✅ تم تحديث اللغة على الخادم إلى ${lang}`);
+        } else {
+            console.error('❌ فشل تحديث اللغة:', data.message);
+        }
+    } catch (error) {
+        console.error('❌ خطأ في تحديث اللغة:', error);
+    }
+}
+
+// ===== تغيير اللغة (مع إعادة تحميل الصفحة) =====
+function changeLanguage(lang) {
+    setLang(lang);
+    const html = document.documentElement;
+    if (lang === 'ar') {
+        html.setAttribute('dir', 'rtl');
+        html.setAttribute('lang', 'ar');
+    } else {
+        html.setAttribute('dir', 'ltr');
+        html.setAttribute('lang', lang);
+    }
+    if (token) {
+        updateUserLanguage(lang);
+    }
+    window.location.reload();
+}
+
+// ===== تصدير CSV =====
+function exportCSV() {
+    if (!transactions.length) return alert(t('noDataToExport'));
+    const BOM = '\uFEFF';
+    let csv = BOM + `${t('description')},${t('amount')},${t('category')},${t('type')},${t('date')}\n`;
+    transactions.forEach(tx => {
+        const date = formatDate(tx.date);
+        const type = tx.type === 'income' ? t('income') : t('expense');
+        csv += `"${tx.description}",${tx.amount.toFixed(0)},"${tx.category}","${type}","${date}"\n`;
+    });
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `transactions_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+// ===== التصفية والبحث =====
+function filterTransactions() {
+    const search = document.getElementById('searchInput').value.toLowerCase();
+    const category = document.getElementById('filterCategory').value;
+    const type = document.getElementById('filterType').value;
+    let filtered = transactions;
+    if (search) {
+        filtered = filtered.filter(t => 
+            t.description.toLowerCase().includes(search) ||
+            (t.notes && t.notes.toLowerCase().includes(search))
+        );
+    }
+    if (category) filtered = filtered.filter(t => t.category === category);
+    if (type) filtered = filtered.filter(t => t.type === type);
+    renderTransactions(filtered);
+}
+
+// ===== التحقق من وجود توكن في URL (Google Auth) =====
+const urlParams = new URLSearchParams(window.location.search);
+const googleToken = urlParams.get('token');
+if (googleToken) {
+    token = googleToken;
+    localStorage.setItem('token', token);
+    window.history.replaceState({}, document.title, '/');
+    location.reload();
+}
+
+// ===== دالة init الكاملة =====
 async function init() {
-    // ===== 1. تهيئة الوضع (Dark/Light) =====
+    // 1. تهيئة الوضع (Dark/Light)
     initTheme();
 
-    // ===== 2. تهيئة اللغة =====
+    // 2. تهيئة اللغة
     const savedLang = localStorage.getItem('lang') || 'ar';
     document.getElementById('langSelector').value = savedLang;
     changeLanguage(savedLang);
 
-    // ===== 3. التحقق من وجود توكن (تسجيل الدخول) =====
+    // 3. التحقق من وجود توكن (تسجيل الدخول)
     if (token) {
-        // ===== عرض واجهة التطبيق =====
         document.getElementById('app').style.display = 'block';
         document.getElementById('loginPage').style.display = 'none';
 
-        // ===== تعيين اسم المستخدم مع الترجمة =====
         const user = JSON.parse(localStorage.getItem('user') || '{}');
         const userNameElement = document.getElementById('userName');
         const welcomeTranslated = t('welcome');
         userNameElement.innerHTML = `<i class="fas fa-user-circle"></i> ${welcomeTranslated} ${user.name || ''}`;
 
-        // ===== تحميل البيانات =====
         await loadCategories();
         await loadTransactions();
         await loadSummary();
         await loadSettings();
         await loadGoals();
 
-        // ===== تحديث ألوان الرسوم البيانية حسب الوضع =====
         updateChartsColors();
-
-        // ===== تطبيق الترجمات على العناصر الجديدة =====
         applyTranslations();
 
     } else {
-        // ===== عرض صفحة تسجيل الدخول =====
         document.getElementById('app').style.display = 'none';
         document.getElementById('loginPage').style.display = 'block';
     }
 
-    // ===== إخفاء مؤشر التحميل (إذا وجد) =====
     const loader = document.getElementById('loader');
     if (loader) loader.style.display = 'none';
 
@@ -1175,14 +1090,12 @@ if (registerForm) registerForm.addEventListener('submit', (e) => { e.preventDefa
 const transactionForm = document.getElementById('transactionForm');
 if (transactionForm) transactionForm.addEventListener('submit', addTransaction);
 
-// أزرار التنقل بين تسجيل الدخول والتسجيل (الجديدة)
 const showRegisterBtn = document.getElementById('showRegisterBtn');
 if (showRegisterBtn) showRegisterBtn.addEventListener('click', showRegister);
 
 const showLoginBtn = document.getElementById('showLoginBtn');
 if (showLoginBtn) showLoginBtn.addEventListener('click', showLogin);
 
-// الروابط النصية القديمة (للتوافق مع الإصدارات السابقة)
 const showRegisterLink = document.getElementById('showRegisterLink');
 if (showRegisterLink) showRegisterLink.addEventListener('click', (e) => { e.preventDefault(); showRegister(); });
 
@@ -1214,6 +1127,24 @@ if (langSelector) langSelector.addEventListener('change', (e) => {
 
 const budgetCard = document.getElementById('budgetCard');
 if (budgetCard) budgetCard.addEventListener('click', updateBudget);
+
+const addGoalBtn = document.getElementById('addGoalBtn');
+if (addGoalBtn) addGoalBtn.addEventListener('click', openGoalModal);
+
+const closeGoalModalBtn = document.getElementById('closeGoalModal');
+if (closeGoalModalBtn) closeGoalModalBtn.addEventListener('click', closeGoalModal);
+
+const goalForm = document.getElementById('goalForm');
+if (goalForm) goalForm.addEventListener('submit', createGoal);
+
+const themeToggle = document.getElementById('themeToggle');
+if (themeToggle) themeToggle.addEventListener('click', toggleTheme);
+
+// إغلاق النافذة المنبثقة عند النقر خارجها
+window.addEventListener('click', (e) => {
+    const modal = document.getElementById('goalModal');
+    if (modal && e.target === modal) closeGoalModal();
+});
 
 // بدء التطبيق
 init();
