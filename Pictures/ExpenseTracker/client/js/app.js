@@ -753,7 +753,10 @@ function filterTransactions() {
 
 // ===== تغيير اللغة =====
 function changeLanguage(lang) {
+    // حفظ اللغة في localStorage
     setLang(lang);
+    
+    // تغيير اتجاه الصفحة حسب اللغة
     const html = document.documentElement;
     if (lang === 'ar') {
         html.setAttribute('dir', 'rtl');
@@ -762,15 +765,14 @@ function changeLanguage(lang) {
         html.setAttribute('dir', 'ltr');
         html.setAttribute('lang', lang);
     }
-    applyTranslations();
-    populateCategorySelects();
-    renderTransactions(transactions);
-    loadSummary();
-
-    // تحديث اللغة على الخادم
+    
+    // حفظ اللغة في localStorage للمستخدم (إذا كان مسجلاً)
     if (token) {
         updateUserLanguage(lang);
     }
+    
+    // إعادة تحميل الصفحة لتطبيق جميع التغييرات
+    window.location.reload();
 }
 
 // ===== تحميل الإعدادات =====
@@ -823,15 +825,32 @@ async function updateUserLanguage(lang) {
 
 // ===== تهيئة التطبيق =====
 async function init() {
+    // قراءة اللغة المخزنة
     const savedLang = localStorage.getItem('lang') || 'ar';
     document.getElementById('langSelector').value = savedLang;
-    changeLanguage(savedLang);
+    
+    // تطبيق اللغة (بدون إعادة تحميل لأننا في بداية التشغيل)
+    setLang(savedLang);
+    const html = document.documentElement;
+    if (savedLang === 'ar') {
+        html.setAttribute('dir', 'rtl');
+        html.setAttribute('lang', 'ar');
+    } else {
+        html.setAttribute('dir', 'ltr');
+        html.setAttribute('lang', savedLang);
+    }
+    applyTranslations();
 
     if (token) {
         document.getElementById('app').style.display = 'block';
         document.getElementById('loginPage').style.display = 'none';
         const user = JSON.parse(localStorage.getItem('user') || '{}');
-        document.getElementById('userName').innerHTML = `<i class="fas fa-user-circle"></i> ${t('welcome')} ${user.name || ''}`;
+        
+        // تعيين اسم المستخدم مع الترجمة
+        const userNameElement = document.getElementById('userName');
+        const welcomeTranslated = t('welcome');
+        userNameElement.innerHTML = `<i class="fas fa-user-circle"></i> ${welcomeTranslated} ${user.name || ''}`;
+        
         await loadCategories();
         await loadTransactions();
         await loadSummary();
