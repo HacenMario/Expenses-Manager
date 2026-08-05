@@ -1,15 +1,30 @@
+// ===== دالة مساعدة للتحويل الآمن إلى عدد مع منازل عشرية =====
+function safeToFixed(value, decimals = 0) {
+    // إذا كانت القيمة غير معرفة أو فارغة أو ليست رقمًا صحيحًا، نعيد "0"
+    if (value === undefined || value === null || typeof value !== 'number' || !isFinite(value)) {
+        return '0';
+    }
+    return value.toFixed(decimals);
+}
+
 // ===== تحميل التحليلات =====
 async function loadAnalytics() {
+    const container = document.getElementById('analyticsContainer');
+    if (!container) return;
+
+    // عرض رسالة تحميل
+    container.innerHTML = `<p>⏳ جاري تحميل التحليلات...</p>`;
+
     try {
         const res = await fetch(`${API}/analytics/insights`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
+
         if (data.success) {
             renderAnalytics(data.data);
         } else {
-            console.error('Analytics error:', data.message);
-            document.getElementById('analyticsContainer').innerHTML = `
+            container.innerHTML = `
                 <div class="analytics-error">
                     <i class="fas fa-exclamation-triangle"></i>
                     <p>${data.message || 'حدث خطأ أثناء تحميل التحليلات'}</p>
@@ -18,7 +33,7 @@ async function loadAnalytics() {
         }
     } catch (err) {
         console.error('Error loading analytics:', err);
-        document.getElementById('analyticsContainer').innerHTML = `
+        container.innerHTML = `
             <div class="analytics-error">
                 <i class="fas fa-exclamation-triangle"></i>
                 <p>حدث خطأ في الاتصال بالخادم</p>
@@ -27,103 +42,130 @@ async function loadAnalytics() {
     }
 }
 
-// ===== عرض التحليلات (مع تحسين الأمان) =====
+// ===== عرض التحليلات (نسخة آمنة تماماً) =====
 function renderAnalytics(analytics) {
     const container = document.getElementById('analyticsContainer');
     if (!container) return;
 
-    // التحقق من وجود بيانات
-    if (!analytics) {
+    // التحقق من وجود البيانات الأساسية
+    if (!analytics || typeof analytics !== 'object') {
         container.innerHTML = `<p style="color:#999;">لا توجد بيانات تحليلية متاحة</p>`;
         return;
     }
 
-    // ===== 1. عرض التوصيات =====
+    // ===== 1. التوصيات =====
     let insightsHtml = '';
-    if (analytics.insights && analytics.insights.length > 0) {
-        insightsHtml = analytics.insights.map(i => `
-            <div class="insight-card insight-${i.type || 'info'}">
-                <div class="insight-header">
-                    <span class="insight-icon">${i.title ? i.title.split(' ')[0] : '💡'}</span>
-                    <span class="insight-title">${i.title || 'توصية'}</span>
+    if (Array.isArray(analytics.insights) && analytics.insights.length > 0) {
+        insightsHtml = analytics.insights.map(i => {
+            const type = i.type || 'info';
+            const title = i.title || 'توصية';
+            const description = i.description || 'لا توجد تفاصيل';
+            const action = i.action || 'لا يوجد إجراء مقترح';
+            return `
+                <div class="insight-card insight-${type}">
+                    <div class="insight-header">
+                        <span class="insight-icon">${title.split(' ')[0] || '💡'}</span>
+                        <span class="insight-title">${title}</span>
+                    </div>
+                    <p class="insight-description">${description}</p>
+                    <div class="insight-action">
+                        <i class="fas fa-lightbulb"></i> ${action}
+                    </div>
                 </div>
-                <p class="insight-description">${i.description || 'لا توجد تفاصيل'}</p>
-                <div class="insight-action">
-                    <i class="fas fa-lightbulb"></i> ${i.action || 'لا يوجد إجراء مقترح'}
-                </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
     } else {
         insightsHtml = `<p style="color:#999;">لا توجد توصيات حالياً</p>`;
     }
 
-    // ===== 2. عرض التنبؤات (مع التحقق من وجود البيانات) =====
+    // ===== 2. التنبؤات =====
     let predictionsHtml = '';
     const predictions = analytics.predictions;
-    if (predictions && predictions.nextMonthTotal !== undefined && predictions.nextMonthTotal !== null) {
-        const confidence = predictions.confidence || 0;
-        predictionsHtml = `
-            <div class="prediction-card">
-                <h4>📊 توقع المصروفات للشهر القادم</h4>
-                <div class="prediction-total">
-                    <span class="prediction-amount">${predictions.nextMonthTotal.toFixed(0)} DZD</span>
-                    <span class="prediction-confidence">دقة: ${confidence.toFixed(0)}%</span>
+    if (predictions && typeof predictions === 'object') {
+        const nextMonthTotal = predictions.nextMonthTotal;
+        const confidence = predictions.confidence;
+        // التحقق من وجود القيم وأنها أرقام
+        if (typeof nextMonthTotal === 'number' && isFinite(nextMonthTotal)) {
+            const conf = (typeof confidence === 'number' && isFinite(confidence)) ? confidence : 0;
+            const trend = predictions.trend === 'increasing' ? '📈 صاعد' :
+                          predictions.trend === 'decreasing' ? '📉 هابط' : 'متذبذب';
+            predictionsHtml = `
+                <div class="prediction-card">
+                    <h4>📊 توقع المصروفات للشهر القادم</h4>
+                    <div class="prediction-total">
+                        <span class="prediction-amount">${safeToFixed(nextMonthTotal)} DZD</span>
+                        <span class="prediction-confidence">دقة: ${safeToFixed(conf)}%</span>
+                    </div>
+                    <div class="prediction-trend">الاتجاه: ${trend}</div>
                 </div>
-                <div class="prediction-trend">
-                    الاتجاه: ${predictions.trend === 'increasing' ? '📈 صاعد' : predictions.trend === 'decreasing' ? '📉 هابط' : 'متذبذب'}
-                </div>
-            </div>
-        `;
+            `;
+        }
     }
 
-    // ===== 3. عرض الشذوذ =====
+    // ===== 3. الشذوذ =====
     let anomaliesHtml = '';
     const anomalies = analytics.anomalies;
-    if (anomalies && Array.isArray(anomalies) && anomalies.length > 0) {
+    if (Array.isArray(anomalies) && anomalies.length > 0) {
         anomaliesHtml = `
             <div class="anomalies-card">
                 <h4>🚨 المعاملات غير الطبيعية</h4>
-                ${anomalies.slice(0, 5).map(a => `
-                    <div class="anomaly-item">
-                        <span>${a.description || 'معاملة غير معروفة'}</span>
-                        <span class="anomaly-amount">${a.amount || 0} DZD</span>
-                        <span class="anomaly-reason">${a.reason || 'غير محدد'}</span>
-                    </div>
-                `).join('')}
+                ${anomalies.slice(0, 5).map(a => {
+                    const desc = a.description || 'معاملة غير معروفة';
+                    const amount = (typeof a.amount === 'number' && isFinite(a.amount)) ? a.amount : 0;
+                    const reason = a.reason || 'غير محدد';
+                    return `
+                        <div class="anomaly-item">
+                            <span>${desc}</span>
+                            <span class="anomaly-amount">${safeToFixed(amount)} DZD</span>
+                            <span class="anomaly-reason">${reason}</span>
+                        </div>
+                    `;
+                }).join('')}
             </div>
         `;
     }
 
-    // ===== 4. عرض الارتباطات =====
+    // ===== 4. الارتباطات =====
     let correlationsHtml = '';
     const correlations = analytics.correlations;
-    if (correlations && Array.isArray(correlations) && correlations.length > 0) {
+    if (Array.isArray(correlations) && correlations.length > 0) {
         correlationsHtml = `
             <div class="correlations-card">
                 <h4>🔗 العلاقات بين الفئات</h4>
-                ${correlations.slice(0, 3).map(c => `
-                    <div class="correlation-item">
-                        <span>${c.category1 || '?'} ↔ ${c.category2 || '?'}</span>
-                        <span class="correlation-strength">${c.strength || 'ضعيفة'}</span>
-                        <span class="correlation-type">${c.type || 'غير معروف'}</span>
-                    </div>
-                `).join('')}
+                ${correlations.slice(0, 3).map(c => {
+                    const cat1 = c.category1 || '?';
+                    const cat2 = c.category2 || '?';
+                    const strength = c.strength || 'ضعيفة';
+                    const type = c.type || 'غير معروف';
+                    return `
+                        <div class="correlation-item">
+                            <span>${cat1} ↔ ${cat2}</span>
+                            <span class="correlation-strength">${strength}</span>
+                            <span class="correlation-type">${type}</span>
+                        </div>
+                    `;
+                }).join('')}
             </div>
         `;
     }
 
-    // ===== 5. عرض الملخص =====
+    // ===== 5. الملخص =====
     let summaryHtml = '';
     const summary = analytics.summary;
-    if (summary) {
+    if (summary && typeof summary === 'object') {
+        const totalExpenses = (typeof summary.totalExpenses === 'number' && isFinite(summary.totalExpenses)) ? summary.totalExpenses : 0;
+        const totalIncome = (typeof summary.totalIncome === 'number' && isFinite(summary.totalIncome)) ? summary.totalIncome : 0;
+        const transactionCount = summary.transactionCount || 0;
+        const avgExpense = (typeof summary.averageExpense === 'number' && isFinite(summary.averageExpense)) ? summary.averageExpense : 0;
+
         summaryHtml = `
             <div class="summary-card">
                 <h4>📋 ملخص سريع</h4>
                 <div class="summary-grid">
-                    <div><span>المصروفات الكلية</span> <strong>${(summary.totalExpenses || 0).toFixed(0)} DZD</strong></div>
-                    <div><span>الدخل الكلي</span> <strong>${(summary.totalIncome || 0).toFixed(0)} DZD</strong></div>
-                    <div><span>عدد المعاملات</span> <strong>${summary.transactionCount || 0}</strong></div>
-                    <div><span>متوسط الإنفاق</span> <strong>${(summary.averageExpense || 0).toFixed(0)} DZD</strong></div>
+                    <div><span>المصروفات الكلية</span> <strong>${safeToFixed(totalExpenses)} DZD</strong></div>
+                    <div><span>الدخل الكلي</span> <strong>${safeToFixed(totalIncome)} DZD</strong></div>
+                    <div><span>عدد المعاملات</span> <strong>${transactionCount}</strong></div>
+                    <div><span>متوسط الإنفاق</span> <strong>${safeToFixed(avgExpense)} DZD</strong></div>
                 </div>
             </div>
         `;
