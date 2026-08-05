@@ -1219,3 +1219,328 @@ html[lang="fr"] #transactions-list td {
         width: 95%;
     }
 }
+
+/* ============================================
+   🌙 الوضع الليلي - أنماط عصرية واحترافية
+   ============================================ */
+
+/* ===== خلفيات أساسية ===== */
+[data-theme="dark"] {
+    --bg-body: #0b0e14;
+    --bg-card: #1a2332;
+    --bg-input: #1e293b;
+    --bg-hover: #2d3a4f;
+    --bg-table-header: #1e293b;
+    --bg-modal: #1a2332;
+    --bg-progress: #1e293b;
+    --bg-alert: rgba(129, 140, 248, 0.08);
+    
+    --text-primary: #e2e8f0;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    --text-inverse: #0b0e14;
+    
+    --border-color: #2d3a4f;
+    --border-light: #1e293b;
+    
+    --shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+    --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.4);
+    
+    --primary: #818cf8;
+    --primary-dark: #6366f1;
+    --success: #34d399;
+    --danger: #f87171;
+    --warning: #fbbf24;
+    --info: #60a5fa;
+}
+
+/* ===== تطبيق الخلفيات ===== */
+[data-theme="dark"] body {
+    background: var(--bg-body);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] #app {
+    background: var(--bg-body);
+    box-shadow: var(--shadow);
+}
+
+/* ===== البطاقات ===== */
+[data-theme="dark"] .card,
+[data-theme="dark"] #transaction-form,
+[data-theme="dark"] #categories-management,
+[data-theme="dark"] #transactions-list,
+[data-theme="dark"] #saving-goals,
+[data-theme="dark"] .chart-wrapper,
+[data-theme="dark"] #budget-progress {
+    background: var(--bg-card);
+    border-color: var(--border-color);
+    box-shadow: var(--shadow-card);
+}
+
+[data-theme="dark"] .card h3 {
+    color: var(--text-secondary);
+}
+
+[data-theme="dark"] .card p {
+    color: var(--text-primary);
+}
+
+/* ===== النصوص ===== */
+[data-theme="dark"] h1,
+[data-theme="dark"] h2,
+[data-theme="dark"] h3,
+[data-theme="dark"] h4,
+[data-theme="dark"] .goal-name,
+[data-theme="dark"] .progress-label,
+[data-theme="dark"] .login-container h2,
+[data-theme="dark"] .modal-content h3 {
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] p,
+[data-theme="dark"] .progress-details,
+[data-theme="dark"] .goal-amount,
+[data-theme="dark"] .login-container p {
+    color: var(--text-secondary);
+}
+
+/* ===== النماذج والحقول ===== */
+[data-theme="dark"] input,
+[data-theme="dark"] select,
+[data-theme="dark"] .filters input,
+[data-theme="dark"] .filters select,
+[data-theme="dark"] .login-container input,
+[data-theme="dark"] .modal-content input,
+[data-theme="dark"] .category-form input[type="text"] {
+    background: var(--bg-input);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] input::placeholder,
+[data-theme="dark"] select::placeholder {
+    color: var(--text-muted);
+}
+
+[data-theme="dark"] input:focus,
+[data-theme="dark"] select:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.2);
+}
+
+/* ===== الجداول ===== */
+[data-theme="dark"] table thead {
+    background: var(--bg-table-header);
+}
+
+[data-theme="dark"] table th {
+    color: var(--text-secondary);
+    border-bottom-color: var(--border-color);
+}
+
+[data-theme="dark"] table td {
+    color: var(--text-primary);
+    border-bottom-color: var(--border-color);
+}
+
+[data-theme="dark"] table tr:hover {
+    background: var(--bg-hover);
+}
+
+/* ===== الأزرار ===== */
+[data-theme="dark"] .btn-primary {
+    background: var(--primary);
+    color: #fff;
+}
+[data-theme="dark"] .btn-primary:hover {
+    background: var(--primary-dark);
+}
+
+[data-theme="dark"] .btn-danger {
+    background: var(--danger);
+}
+[data-theme="dark"] .btn-danger:hover {
+    background: #ef4444;
+}
+
+[data-theme="dark"] .btn-success {
+    background: var(--success);
+}
+[data-theme="dark"] .btn-success:hover {
+    background: #10b981;
+}
+
+[data-theme="dark"] .btn-edit {
+    background: var(--warning);
+}
+[data-theme="dark"] .btn-edit:hover {
+    background: #f59e0b;
+}
+
+[data-theme="dark"] .btn-delete {
+    background: var(--danger);
+}
+[data-theme="dark"] .btn-delete:hover {
+    background: #ef4444;
+}
+
+/* ===== شريط التقدم ===== */
+[data-theme="dark"] .progress-bar-container {
+    background: var(--bg-progress);
+}
+
+[data-theme="dark"] .progress-status {
+    background: rgba(129, 140, 248, 0.08);
+    color: var(--text-secondary);
+}
+
+[data-theme="dark"] .progress-status.warning {
+    background: rgba(251, 191, 36, 0.12);
+    color: var(--warning);
+}
+
+[data-theme="dark"] .progress-status.danger {
+    background: rgba(248, 113, 113, 0.12);
+    color: var(--danger);
+}
+
+/* ===== أهداف الادخار ===== */
+[data-theme="dark"] .goal-card {
+    background: var(--bg-card);
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] .goal-card .goal-amount {
+    color: var(--text-secondary);
+}
+
+[data-theme="dark"] .goal-card .goal-amount strong {
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .goal-card .goal-progress .progress-bar {
+    background: var(--bg-progress);
+}
+
+/* ===== النوافذ المنبثقة ===== */
+[data-theme="dark"] .modal-content {
+    background: var(--bg-modal);
+    border-color: var(--border-color);
+    box-shadow: var(--shadow);
+}
+
+[data-theme="dark"] .modal-close {
+    color: var(--text-muted);
+}
+[data-theme="dark"] .modal-close:hover {
+    color: var(--text-primary);
+}
+
+/* ===== صفحة تسجيل الدخول ===== */
+[data-theme="dark"] .login-container {
+    background: var(--bg-card);
+    border-color: var(--border-color);
+    box-shadow: var(--shadow);
+}
+
+/* ===== الهيدر ===== */
+[data-theme="dark"] header {
+    border-bottom-color: var(--border-color);
+}
+
+[data-theme="dark"] header h1 {
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] #userName {
+    color: var(--primary);
+}
+
+/* ===== التنبيهات ===== */
+[data-theme="dark"] .budget-alert.danger {
+    background: rgba(248, 113, 113, 0.12);
+    border-color: var(--danger);
+    color: var(--danger);
+}
+
+[data-theme="dark"] .budget-alert.warning {
+    background: rgba(251, 191, 36, 0.12);
+    border-color: var(--warning);
+    color: var(--warning);
+}
+
+/* ===== تحسين التباين للعناصر الصغيرة ===== */
+[data-theme="dark"] .category-item {
+    background: var(--bg-input);
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] .category-item .cat-info {
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .stat-card {
+    background: var(--bg-card);
+}
+
+/* ===== شريط التمرير ===== */
+[data-theme="dark"] ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+[data-theme="dark"] ::-webkit-scrollbar-track {
+    background: var(--bg-body);
+}
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+    background: var(--text-muted);
+    border-radius: 4px;
+}
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+    background: var(--text-secondary);
+}
+
+/* ===== العناوين الجانبية ===== */
+[data-theme="dark"] .goals-header h2,
+[data-theme="dark"] #transaction-form h2,
+[data-theme="dark"] #categories-management h2,
+[data-theme="dark"] #transactions-list h2,
+[data-theme="dark"] .chart-wrapper h3 {
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .goals-header h2 i,
+[data-theme="dark"] #transaction-form h2 i,
+[data-theme="dark"] #categories-management h2 i,
+[data-theme="dark"] #transactions-list h2 i,
+[data-theme="dark"] .chart-wrapper h3 i {
+    color: var(--primary);
+}
+
+/* ===== الأيقونات ===== */
+[data-theme="dark"] .fas,
+[data-theme="dark"] .far,
+[data-theme="dark"] .fab {
+    color: var(--text-secondary);
+}
+
+[data-theme="dark"] .card h3 i {
+    color: var(--primary);
+}
+
+/* ===== حقل اختيار اللغة ===== */
+[data-theme="dark"] #langSelector {
+    background: var(--bg-input);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+}
+
+/* ===== زر تبديل الوضع ===== */
+[data-theme="dark"] .theme-toggle {
+    border-color: var(--border-color);
+    color: var(--text-primary);
+}
+[data-theme="dark"] .theme-toggle:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
