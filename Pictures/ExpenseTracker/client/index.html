@@ -3,37 +3,6 @@
 <head>
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <meta charset="UTF-8" />
-
-    <!-- ===== PWA - Progressive Web App ===== -->
-<link rel="manifest" href="/manifest.json" />
-<link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
-<meta name="apple-mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="apple-mobile-web-app-title" content="ExpenseTracker" />
-<meta name="theme-color" content="#667eea" />
-<meta name="msapplication-navbutton-color" content="#667eea" />
-<meta name="mobile-web-app-capable" content="yes" />
-
-<!-- سجّل Service Worker عند تحميل الصفحة -->
-<script>
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker
-                .register('/sw.js')
-                .then((registration) => {
-                    console.log('✅ Service Worker registered successfully:', registration);
-                    // التحقق من وجود تحديث
-                    registration.addEventListener('updatefound', () => {
-                        console.log('🔄 Service Worker update found');
-                    });
-                })
-                .catch((error) => {
-                    console.error('❌ Service Worker registration failed:', error);
-                });
-        });
-    }
-</script>
-    
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title data-i18n="appTitle">إدارة المصاريف</title>
     <link rel="stylesheet" href="/css/style.css" />
@@ -51,11 +20,6 @@
                     <option value="en">🇬🇧 English</option>
                 </select>
                 <span id="userName"><i class="fas fa-user-circle"></i> <span data-i18n="welcome">مرحباً</span></span>
-
-                <!-- ===== زر تبديل الوضع (Dark/Light) ===== -->
-<button id="themeToggle" class="theme-toggle" title="تبديل الوضع">
-    <i class="fas fa-moon"></i>
-</button>
                                
                 <button id="logoutBtn" class="btn btn-danger">
                     <i class="fas fa-sign-out-alt"></i> <span data-i18n="logout">خروج</span>
@@ -124,35 +88,6 @@
         <span data-i18n="budgetStatus">ضمن الميزانية</span>
     </div>
 </section>
-
-<!-- ===== أهداف الادخار ===== -->
-<section id="saving-goals">
-    <div class="goals-header">
-        <h2><i class="fas fa-bullseye"></i> <span data-i18n="savingGoals">أهداف الادخار</span></h2>
-        <button id="addGoalBtn" class="btn btn-primary">
-            <i class="fas fa-plus"></i> <span data-i18n="addGoal">إضافة هدف</span>
-        </button>
-    </div>
-    <div id="goalsList" class="goals-grid">
-        <!-- سيتم تعبئتها بواسطة JavaScript -->
-    </div>
-</section>
-
-<!-- ===== نموذج إضافة هدف (مخفي) ===== -->
-<div id="goalModal" class="modal" style="display:none;">
-    <div class="modal-content">
-        <span class="modal-close" id="closeGoalModal">&times;</span>
-        <h3 data-i18n="newGoal">هدف جديد</h3>
-        <form id="goalForm">
-            <input type="text" id="goalName" data-i18n-placeholder="goalName" placeholder="اسم الهدف" required />
-            <input type="number" id="goalTarget" data-i18n-placeholder="targetAmount" placeholder="المبلغ المستهدف" step="0.01" required />
-            <input type="date" id="goalDeadline" required />
-            <input type="text" id="goalIcon" data-i18n-placeholder="goalIcon" placeholder="رمز تعبيري (🎯)" />
-            <input type="color" id="goalColor" value="#667eea" />
-            <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> <span data-i18n="save">حفظ</span></button>
-        </form>
-    </div>
-</div>
 
         <!-- ===== الرسوم البيانية ===== -->
         <section id="charts-section">
