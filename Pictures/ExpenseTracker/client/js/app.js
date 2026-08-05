@@ -83,14 +83,16 @@ function initTheme() {
 }
 
 // ===== الحصول على أيقونة الفئة =====
+// ===== الحصول على أيقونة الفئة بشكل صحيح =====
 function getIconForCategory(categoryName) {
-    // 1. البحث في الفئات المخصصة
+    // 1. البحث في الفئات المخصصة (المخزنة في قاعدة البيانات)
     const customCat = categories.find(c => c.name === categoryName);
     if (customCat && customCat.icon) {
         return customCat.icon;
     }
-    
-    // 2. البحث في الفئات الافتراضية
+
+    // 2. البحث في الفئات الافتراضية باستخدام المفاتيح الإنجليزية
+    // هذه هي الأسماء المخزنة في قاعدة البيانات للفئات الافتراضية
     const defaultKeysMap = {
         'طعام': 'Food',
         'مواصلات': 'Transport',
@@ -102,27 +104,32 @@ function getIconForCategory(categoryName) {
         'صحة': 'Healthcare',
         'أخرى': 'Other'
     };
-    
-    if (DEFAULT_CATEGORY_ICONS[categoryName]) {
-        return DEFAULT_CATEGORY_ICONS[categoryName];
-    }
-    
+
+    // 3. نبحث عن المفتاح الإنجليزي المقابل للاسم المخزن
+    let engKey = null;
     for (const [ar, en] of Object.entries(defaultKeysMap)) {
         if (categoryName === ar || categoryName === en) {
-            if (DEFAULT_CATEGORY_ICONS[en]) {
-                return DEFAULT_CATEGORY_ICONS[en];
+            engKey = en;
+            break;
+        }
+    }
+
+    // 4. إذا لم نجد، نبحث في الترجمة الحالية للفئات الافتراضية
+    if (!engKey) {
+        for (const [en, translated] of Object.entries(t('defaultCategories'))) {
+            if (categoryName === translated) {
+                engKey = en;
+                break;
             }
         }
     }
-    
-    for (const [en, translated] of Object.entries(t('defaultCategories'))) {
-        if (categoryName === translated) {
-            if (DEFAULT_CATEGORY_ICONS[en]) {
-                return DEFAULT_CATEGORY_ICONS[en];
-            }
-        }
+
+    // 5. إذا وجدنا المفتاح، نعيد الأيقونة المناسبة
+    if (engKey && DEFAULT_CATEGORY_ICONS[engKey]) {
+        return DEFAULT_CATEGORY_ICONS[engKey];
     }
-    
+
+    // 6. أيقونة افتراضية إذا لم نجد تطابقاً
     return '📁';
 }
 
@@ -229,38 +236,47 @@ function populateCategorySelects() {
     const select = document.getElementById('category');
     const currentVal = select.value;
     select.innerHTML = `<option value="">${t('selectCategory')}</option>`;
-    
+
+    // 1. إضافة الفئات المخصصة (المخزنة في قاعدة البيانات)
     categories.forEach(c => {
-        select.innerHTML += `<option value="${c.name}">${c.icon || '📁'} ${c.name}</option>`;
+        const icon = c.icon || '📁';
+        select.innerHTML += `<option value="${c.name}">${icon} ${c.name}</option>`;
     });
-    
+
+    // 2. إضافة الفئات الافتراضية مع الترجمة والأيقونة المناسبة
     const defaultKeys = ['Food', 'Transport', 'Books', 'Supplies', 'Entertainment', 'Rent', 'Utilities', 'Healthcare', 'Other'];
     defaultKeys.forEach(key => {
+        // الاسم المترجم للعرض في القائمة
         const translatedName = t(`defaultCategories.${key}`);
+        // الأيقونة المناسبة من القاموس
+        const icon = DEFAULT_CATEGORY_ICONS[key] || '📁';
+
+        // نتأكد من عدم إضافة الفئة إذا كانت موجودة بالفعل في الفئات المخصصة
         if (!categories.some(c => c.name === translatedName)) {
-            const icon = DEFAULT_CATEGORY_ICONS[key] || '📁';
             select.innerHTML += `<option value="${translatedName}">${icon} ${translatedName}</option>`;
         }
     });
-    
+
     if (currentVal) select.value = currentVal;
 
+    // ===== نفس الشيء لقائمة التصفية =====
     const filterSelect = document.getElementById('filterCategory');
     const filterVal = filterSelect.value;
     filterSelect.innerHTML = `<option value="">${t('allCategories')}</option>`;
-    
+
     categories.forEach(c => {
-        filterSelect.innerHTML += `<option value="${c.name}">${c.icon || '📁'} ${c.name}</option>`;
+        const icon = c.icon || '📁';
+        filterSelect.innerHTML += `<option value="${c.name}">${icon} ${c.name}</option>`;
     });
-    
+
     defaultKeys.forEach(key => {
         const translatedName = t(`defaultCategories.${key}`);
+        const icon = DEFAULT_CATEGORY_ICONS[key] || '📁';
         if (!categories.some(c => c.name === translatedName)) {
-            const icon = DEFAULT_CATEGORY_ICONS[key] || '📁';
             filterSelect.innerHTML += `<option value="${translatedName}">${icon} ${translatedName}</option>`;
         }
     });
-    
+
     if (filterVal) filterSelect.value = filterVal;
 }
 
@@ -659,8 +675,13 @@ function renderTransactions(list) {
     }
 
     tbody.innerHTML = list.map(tx => {
+        // الحصول على الأيقونة الصحيحة
         const icon = getIconForCategory(tx.category);
+
+        // الحصول على الاسم المعروض (مترجم إذا كان افتراضياً)
         let displayName = tx.category;
+
+        // قائمة الفئات الافتراضية
         const defaultKeysMap = {
             'طعام': 'Food',
             'مواصلات': 'Transport',
@@ -672,6 +693,8 @@ function renderTransactions(list) {
             'صحة': 'Healthcare',
             'أخرى': 'Other'
         };
+
+        // البحث عن المفتاح الإنجليزي
         let engKey = null;
         for (const [ar, en] of Object.entries(defaultKeysMap)) {
             if (tx.category === ar || tx.category === en) {
@@ -687,6 +710,8 @@ function renderTransactions(list) {
                 }
             }
         }
+
+        // إذا وجدنا المفتاح، نعرض الاسم المترجم
         if (engKey) {
             displayName = t(`defaultCategories.${engKey}`);
         }
@@ -724,7 +749,7 @@ function updateCharts(categoryTotals, allTransactions) {
     const textColor = isDark ? '#f0f6fc' : '#1a202c';
     const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
     const borderColor = isDark ? '#30363d' : '#e2e8f0';
-    
+
     // الرسم البياني الدائري
     const ctxPie = document.getElementById('expenseChart').getContext('2d');
     if (chartPie) chartPie.destroy();
@@ -733,8 +758,13 @@ function updateCharts(categoryTotals, allTransactions) {
     const catValues = Object.values(categoryTotals);
 
     if (catNames.length > 0) {
+        // ترجمة أسماء الفئات للرسم البياني مع الحفاظ على الأيقونات
         const translatedLabels = catNames.map(name => {
-            const defaultKeys = {
+            // الحصول على الأيقونة المناسبة
+            const icon = getIconForCategory(name);
+
+            // محاولة ترجمة اسم الفئة
+            const defaultKeysMap = {
                 'طعام': 'Food',
                 'مواصلات': 'Transport',
                 'كتب': 'Books',
@@ -745,8 +775,9 @@ function updateCharts(categoryTotals, allTransactions) {
                 'صحة': 'Healthcare',
                 'أخرى': 'Other'
             };
+
             let engKey = null;
-            for (const [ar, en] of Object.entries(defaultKeys)) {
+            for (const [ar, en] of Object.entries(defaultKeysMap)) {
                 if (name === ar || name === en) {
                     engKey = en;
                     break;
@@ -760,7 +791,7 @@ function updateCharts(categoryTotals, allTransactions) {
                     }
                 }
             }
-            const icon = getIconForCategory(name);
+
             const displayName = engKey ? t(`defaultCategories.${engKey}`) : name;
             return `${icon} ${displayName}`;
         });
