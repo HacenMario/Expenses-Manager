@@ -1544,3 +1544,82 @@ html[lang="fr"] #transactions-list td {
     border-color: var(--primary);
     color: var(--primary);
 }
+
+/* ===== لوحة التحكم المتقدمة (Widgets) ===== */
+#dashboard-widgets {
+    margin-bottom: 30px;
+}
+
+.widgets-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 15px;
+}
+
+.widget {
+    background: var(--bg-card, #fff);
+    padding: 18px 20px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    border: 1px solid var(--border-light, #f0f0f0);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.widget:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+}
+
+.widget-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+.widget-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.widget-label {
+    font-size: 12px;
+    color: var(--text-muted, #718096);
+    display: block;
+    margin-bottom: 2px;
+}
+
+.widget-value {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-primary, #1a202c);
+    display: block;
+}
+
+.widget-sub {
+    font-size: 12px;
+    color: var(--text-muted, #718096);
+    display: block;
+    margin-top: 2px;
+}
+
+/* تحسين التجاوب */
+@media (max-width: 600px) {
+    .widgets-grid {
+        grid-template-columns: 1fr;
+    }
+    .widget {
+        padding: 14px 16px;
+    }
+    .widget-value {
+        font-size: 16px;
+    }
+}
