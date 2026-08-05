@@ -1,3 +1,4 @@
+// ===== عنوان API =====
 const API = window.location.hostname === 'localhost' 
     ? 'http://localhost:5000/api' 
     : 'https://expenses-manager-z2up.onrender.com/api';
@@ -25,58 +26,32 @@ const DEFAULT_CATEGORY_ICONS = {
     'Other': '📁'
 };
 
-// ===== استرجاع أيقونة الفئة (تدعم الأسماء المترجمة) =====
+// ===== استرجاع أيقونة الفئة =====
 function getIconForCategory(categoryName) {
-    // 1. البحث في الفئات المخصصة (المستخدم)
     const customCat = categories.find(c => c.name === categoryName);
-    if (customCat && customCat.icon) {
-        return customCat.icon;
-    }
+    if (customCat && customCat.icon) return customCat.icon;
     
-    // 2. البحث في الفئات الافتراضية (باستخدام الترجمة العكسية)
     const defaultKeysMap = {
-        'طعام': 'Food',
-        'مواصلات': 'Transport',
-        'كتب': 'Books',
-        'مستلزمات': 'Supplies',
-        'ترفيه': 'Entertainment',
-        'إيجار': 'Rent',
-        'فواتير': 'Utilities',
-        'صحة': 'Healthcare',
-        'أخرى': 'Other'
+        'طعام': 'Food', 'مواصلات': 'Transport', 'كتب': 'Books',
+        'مستلزمات': 'Supplies', 'ترفيه': 'Entertainment',
+        'إيجار': 'Rent', 'فواتير': 'Utilities', 'صحة': 'Healthcare', 'أخرى': 'Other'
     };
     
-    // نحاول العثور على المفتاح الإنجليزي من الاسم الحالي
-    let engKey = null;
+    if (DEFAULT_CATEGORY_ICONS[categoryName]) return DEFAULT_CATEGORY_ICONS[categoryName];
     
-    // أولاً: نبحث مباشرة في المفاتيح الإنجليزية
-    if (DEFAULT_CATEGORY_ICONS[categoryName]) {
-        return DEFAULT_CATEGORY_ICONS[categoryName];
-    }
-    
-    // ثانياً: نبحث في خريطة الترجمة (عربي -> إنجليزي)
     for (const [ar, en] of Object.entries(defaultKeysMap)) {
         if (categoryName === ar || categoryName === en) {
-            engKey = en;
-            break;
+            if (DEFAULT_CATEGORY_ICONS[en]) return DEFAULT_CATEGORY_ICONS[en];
         }
     }
     
-    // ثالثاً: نبحث عن الترجمة الحالية في defaultCategories من ملف languages.js
-    if (!engKey) {
-        for (const [en, translated] of Object.entries(t('defaultCategories'))) {
-            if (categoryName === translated) {
-                engKey = en;
-                break;
-            }
+    for (const [en, translated] of Object.entries(t('defaultCategories'))) {
+        if (categoryName === translated) {
+            if (DEFAULT_CATEGORY_ICONS[en]) return DEFAULT_CATEGORY_ICONS[en];
         }
     }
     
-    if (engKey && DEFAULT_CATEGORY_ICONS[engKey]) {
-        return DEFAULT_CATEGORY_ICONS[engKey];
-    }
-    
-    return '📁'; // أيقونة افتراضية
+    return '📁';
 }
 
 function getCategoryIcon(categoryName) {
@@ -194,16 +169,13 @@ function populateCategorySelects() {
     const currentVal = select.value;
     select.innerHTML = `<option value="">${t('selectCategory')}</option>`;
     
-    // الفئات المخصصة
     categories.forEach(c => {
         select.innerHTML += `<option value="${c.name}">${c.icon || '📁'} ${c.name}</option>`;
     });
     
-    // الفئات الافتراضية مع أيقوناتها
     const defaultKeys = ['Food', 'Transport', 'Books', 'Supplies', 'Entertainment', 'Rent', 'Utilities', 'Healthcare', 'Other'];
     defaultKeys.forEach(key => {
         const translatedName = t(`defaultCategories.${key}`);
-        // نضيفها فقط إذا لم تكن موجودة في الفئات المخصصة
         if (!categories.some(c => c.name === translatedName)) {
             const icon = DEFAULT_CATEGORY_ICONS[key] || '📁';
             select.innerHTML += `<option value="${translatedName}">${icon} ${translatedName}</option>`;
@@ -212,7 +184,6 @@ function populateCategorySelects() {
     
     if (currentVal) select.value = currentVal;
 
-    // نفس الشيء لقائمة التصفية
     const filterSelect = document.getElementById('filterCategory');
     const filterVal = filterSelect.value;
     filterSelect.innerHTML = `<option value="">${t('allCategories')}</option>`;
@@ -311,7 +282,6 @@ async function loadTransactions() {
     } catch (err) { console.error('خطأ في تحميل المعاملات', err); }
 }
 
-// ===== تحميل الملخص (مع تحديث التحذير) =====
 async function loadSummary() {
     try {
         const res = await fetch(`${API}/transactions/summary`, {
@@ -326,12 +296,8 @@ async function loadSummary() {
             document.getElementById('monthlyBudgetDisplay').textContent = summary.monthlyBudget.toFixed(0) + ' ' + CURRENCY;
             document.getElementById('transactionCount').textContent = summary.transactionCount;
 
-            // ===== تحديث شريط تقدم الميزانية (إضافة جديدة) =====
             updateBudgetProgress(summary);
-
-            // تحديث التحذير (هام)
             checkBudgetAlert(summary);
-            // تحديث الرسوم البيانية
             updateCharts(summary.categoryTotals, transactions);
         } else {
             console.error('Error in summary:', data.message);
@@ -341,25 +307,20 @@ async function loadSummary() {
     }
 }
 
-// ===== تحديث شريط تقدم الميزانية =====
 function updateBudgetProgress(summaryData) {
     const { totalExpenses, monthlyBudget } = summaryData;
 
-    // تحديث الأرقام
     document.getElementById('spentAmount').textContent = totalExpenses.toFixed(0) + ' ' + CURRENCY;
     document.getElementById('budgetAmount').textContent = monthlyBudget.toFixed(0) + ' ' + CURRENCY;
 
-    // حساب النسبة المئوية
     let percentage = 0;
     if (monthlyBudget > 0) {
         percentage = Math.min((totalExpenses / monthlyBudget) * 100, 100);
     }
     percentage = Math.round(percentage);
 
-    // تحديث النسبة المعروضة
     document.getElementById('budgetPercentage').textContent = percentage + '%';
 
-    // تحديث شريط التقدم
     const progressBar = document.getElementById('budgetProgressBar');
     const progressText = document.getElementById('progressBarText');
     const statusDiv = document.getElementById('progressStatus');
@@ -367,7 +328,6 @@ function updateBudgetProgress(summaryData) {
     progressBar.style.width = percentage + '%';
     progressText.textContent = percentage + '%';
 
-    // تحديث اللون والحالة حسب النسبة
     progressBar.classList.remove('low', 'medium', 'high');
     
     if (percentage < 70) {
@@ -385,7 +345,6 @@ function updateBudgetProgress(summaryData) {
     }
 }
 
-// ===== التحقق من الميزانية (مع تحديث واجهة التحذير) =====
 function checkBudgetAlert(summaryData) {
     const alertDiv = document.getElementById('budgetAlert');
     const alertMsg = document.getElementById('budgetAlertMessage');
@@ -408,7 +367,6 @@ function checkBudgetAlert(summaryData) {
     }
 }
 
-// ===== تحديث الميزانية =====
 async function updateBudget() {
     const current = document.getElementById('monthlyBudgetDisplay').textContent;
     const newBudget = prompt('أدخل الميزانية الشهرية الجديدة:', current);
@@ -440,7 +398,6 @@ async function updateBudget() {
     } catch { alert('❌ ' + t('serverError')); }
 }
 
-// ===== إضافة معاملة =====
 async function addTransaction(e) {
     e.preventDefault();
     const desc = document.getElementById('desc').value.trim();
@@ -449,7 +406,6 @@ async function addTransaction(e) {
     const type = document.getElementById('type').value;
     if (!desc || !amount || !category) return alert(t('fillAllFields'));
 
-    // تعطيل الزر مؤقتاً لمنع النقر المتكرر
     const submitBtn = document.querySelector('#transactionForm button[type="submit"]');
     const originalText = submitBtn.innerHTML;
     submitBtn.disabled = true;
@@ -465,18 +421,13 @@ async function addTransaction(e) {
             body: JSON.stringify({ description: desc, amount, category, type })
         });
 
-        // قراءة الرد (حتى لو كان خطأ)
         const result = await res.json();
 
         if (result.success) {
-            // إعادة تعيين النموذج
             document.getElementById('transactionForm').reset();
-
-            // تحديث البيانات (الجدول، الإحصائيات، التحذير)
             await loadTransactions();
             await loadSummary();
 
-            // عرض تحذير فوري إذا تم التجاوز
             if (result.isOverBudget) {
                 const overspent = (result.totalExpenses - result.monthlyBudget).toFixed(0);
                 const msg = t('overBudgetToast', {
@@ -484,7 +435,6 @@ async function addTransaction(e) {
                     amount: overspent + ' ' + CURRENCY
                 });
                 alert('⚠️ ' + msg);
-                // تحديث التحذير في الصفحة (ستقوم loadSummary بالاتصال بـ checkBudgetAlert)
             }
         } else {
             alert('❌ ' + (result.message || t('serverError')));
@@ -493,7 +443,6 @@ async function addTransaction(e) {
         console.error('Error adding transaction:', error);
         alert('❌ ' + t('serverError'));
     } finally {
-        // إعادة تمكين الزر
         submitBtn.disabled = false;
         submitBtn.innerHTML = originalText;
     }
@@ -514,7 +463,6 @@ async function deleteTransaction(id) {
     } catch { alert('❌ ' + t('serverError')); }
 }
 
-// ===== عرض الجدول =====
 function renderTransactions(list) {
     const tbody = document.getElementById('transactionsBody');
     if (!list || list.length === 0) {
@@ -526,7 +474,6 @@ function renderTransactions(list) {
         const icon = getIconForCategory(tx.category);
         let displayName = tx.category;
         
-        // ترجمة اسم الفئة إذا كانت افتراضية
         const defaultKeysMap = {
             'طعام': 'Food',
             'مواصلات': 'Transport',
@@ -545,7 +492,6 @@ function renderTransactions(list) {
                 break;
             }
         }
-        // إذا لم نجد، نبحث في الترجمة الحالية
         if (!engKey) {
             for (const [en, translated] of Object.entries(t('defaultCategories'))) {
                 if (tx.category === translated) {
@@ -587,7 +533,6 @@ function formatDate(dateStr) {
 
 // ===== الرسوم البيانية =====
 function updateCharts(categoryTotals, allTransactions) {
-    // ===== الرسم البياني الدائري (مع الأيقونات) =====
     const ctxPie = document.getElementById('expenseChart').getContext('2d');
     if (chartPie) chartPie.destroy();
 
@@ -595,14 +540,10 @@ function updateCharts(categoryTotals, allTransactions) {
     const catValues = Object.values(categoryTotals);
 
     if (catNames.length > 0) {
-        // إنشاء تسميات مع الأيقونات
         const translatedLabels = catNames.map(name => {
-            // الحصول على الأيقونة المناسبة
             const icon = getIconForCategory(name);
-            // الحصول على الاسم المترجم
             let displayName = name;
             
-            // محاولة ترجمة الاسم إذا كان من الفئات الافتراضية
             const defaultKeysMap = {
                 'طعام': 'Food',
                 'مواصلات': 'Transport',
@@ -622,7 +563,6 @@ function updateCharts(categoryTotals, allTransactions) {
                 }
             }
             if (!engKey) {
-                // البحث في الترجمة الحالية
                 for (const [en, translated] of Object.entries(t('defaultCategories'))) {
                     if (name === translated) {
                         engKey = en;
@@ -634,7 +574,6 @@ function updateCharts(categoryTotals, allTransactions) {
                 displayName = t(`defaultCategories.${engKey}`);
             }
             
-            // إرجاع التسمية مع الأيقونة
             return `${icon} ${displayName}`;
         });
 
@@ -665,7 +604,6 @@ function updateCharts(categoryTotals, allTransactions) {
         });
     }
 
-    // ===== الرسم البياني الخطي (بدون تغيير) =====
     const ctxTrend = document.getElementById('trendChart').getContext('2d');
     if (chartTrend) chartTrend.destroy();
     
@@ -715,11 +653,10 @@ function updateCharts(categoryTotals, allTransactions) {
     });
 }
 
-// ===== متغيرات الأهداف =====
+// ===== أهداف الادخار =====
 let goals = [];
 let editingGoalId = null;
 
-// ===== تحميل الأهداف =====
 async function loadGoals() {
     try {
         const res = await fetch(`${API}/goals`, {
@@ -735,7 +672,6 @@ async function loadGoals() {
     }
 }
 
-// ===== عرض الأهداف =====
 function renderGoals() {
     const container = document.getElementById('goalsList');
     if (!goals.length) {
@@ -783,7 +719,6 @@ function renderGoals() {
     }).join('');
 }
 
-// ===== إضافة مبلغ إلى الهدف =====
 async function addToGoal(goalId) {
     const amount = prompt(t('enterAmount') || 'أدخل المبلغ المراد إضافته:');
     if (amount === null) return;
@@ -813,7 +748,6 @@ async function addToGoal(goalId) {
     } catch { alert('❌ ' + t('serverError')); }
 }
 
-// ===== إنشاء هدف جديد =====
 async function createGoal(e) {
     e.preventDefault();
     const name = document.getElementById('goalName').value.trim();
@@ -847,7 +781,6 @@ async function createGoal(e) {
     } catch { alert('❌ ' + t('serverError')); }
 }
 
-// ===== تعديل هدف =====
 async function editGoal(goalId) {
     const goal = goals.find(g => g._id === goalId);
     if (!goal) return;
@@ -861,7 +794,6 @@ async function editGoal(goalId) {
     document.getElementById('goalModal').style.display = 'flex';
 }
 
-// ===== حذف هدف =====
 async function deleteGoal(goalId) {
     if (!confirm(t('deleteConfirm') || 'هل أنت متأكد من حذف هذا الهدف؟')) return;
     try {
@@ -878,7 +810,6 @@ async function deleteGoal(goalId) {
     } catch { alert('❌ ' + t('serverError')); }
 }
 
-// ===== فتح/إغلاق النافذة المنبثقة =====
 function openGoalModal() {
     document.getElementById('goalForm').reset();
     editingGoalId = null;
@@ -888,18 +819,6 @@ function openGoalModal() {
 function closeGoalModal() {
     document.getElementById('goalModal').style.display = 'none';
 }
-
-// ===== ربط الأحداث =====
-document.getElementById('addGoalBtn').addEventListener('click', openGoalModal);
-document.getElementById('closeGoalModal').addEventListener('click', closeGoalModal);
-document.getElementById('goalForm').addEventListener('submit', createGoal);
-window.addEventListener('click', (e) => {
-    if (e.target === document.getElementById('goalModal')) closeGoalModal();
-});
-
-// ===== تحديث init لتحميل الأهداف =====
-// أضف هذا السطر داخل init() بعد loadCategories():
-await loadGoals();
 
 // ===== تصدير CSV =====
 function exportCSV() {
@@ -939,10 +858,7 @@ function filterTransactions() {
 
 // ===== تغيير اللغة =====
 function changeLanguage(lang) {
-    // حفظ اللغة في localStorage
     setLang(lang);
-    
-    // تغيير اتجاه الصفحة حسب اللغة
     const html = document.documentElement;
     if (lang === 'ar') {
         html.setAttribute('dir', 'rtl');
@@ -951,13 +867,9 @@ function changeLanguage(lang) {
         html.setAttribute('dir', 'ltr');
         html.setAttribute('lang', lang);
     }
-    
-    // حفظ اللغة في localStorage للمستخدم (إذا كان مسجلاً)
     if (token) {
         updateUserLanguage(lang);
     }
-    
-    // إعادة تحميل الصفحة لتطبيق جميع التغييرات
     window.location.reload();
 }
 
@@ -1011,11 +923,9 @@ async function updateUserLanguage(lang) {
 
 // ===== تهيئة التطبيق =====
 async function init() {
-    // قراءة اللغة المخزنة
     const savedLang = localStorage.getItem('lang') || 'ar';
     document.getElementById('langSelector').value = savedLang;
     
-    // تطبيق اللغة (بدون إعادة تحميل لأننا في بداية التشغيل)
     setLang(savedLang);
     const html = document.documentElement;
     if (savedLang === 'ar') {
@@ -1032,7 +942,6 @@ async function init() {
         document.getElementById('loginPage').style.display = 'none';
         const user = JSON.parse(localStorage.getItem('user') || '{}');
         
-        // تعيين اسم المستخدم مع الترجمة
         const userNameElement = document.getElementById('userName');
         const welcomeTranslated = t('welcome');
         userNameElement.innerHTML = `<i class="fas fa-user-circle"></i> ${welcomeTranslated} ${user.name || ''}`;
@@ -1041,13 +950,14 @@ async function init() {
         await loadTransactions();
         await loadSummary();
         await loadSettings();
+        await loadGoals(); // ← تم إضافة هذا السطر هنا
     } else {
         document.getElementById('app').style.display = 'none';
         document.getElementById('loginPage').style.display = 'block';
     }
 }
 
-// ===== ربط الأحداث (مع التحقق من وجود العناصر) =====
+// ===== ربط الأحداث =====
 const loginForm = document.getElementById('loginForm');
 if (loginForm) loginForm.addEventListener('submit', (e) => { e.preventDefault(); login(); });
 
@@ -1057,14 +967,12 @@ if (registerForm) registerForm.addEventListener('submit', (e) => { e.preventDefa
 const transactionForm = document.getElementById('transactionForm');
 if (transactionForm) transactionForm.addEventListener('submit', addTransaction);
 
-// أزرار التنقل بين تسجيل الدخول والتسجيل (الجديدة)
 const showRegisterBtn = document.getElementById('showRegisterBtn');
 if (showRegisterBtn) showRegisterBtn.addEventListener('click', showRegister);
 
 const showLoginBtn = document.getElementById('showLoginBtn');
 if (showLoginBtn) showLoginBtn.addEventListener('click', showLogin);
 
-// الروابط النصية القديمة (للتوافق مع الإصدارات السابقة)
 const showRegisterLink = document.getElementById('showRegisterLink');
 if (showRegisterLink) showRegisterLink.addEventListener('click', (e) => { e.preventDefault(); showRegister(); });
 
@@ -1096,6 +1004,21 @@ if (langSelector) langSelector.addEventListener('change', (e) => {
 
 const budgetCard = document.getElementById('budgetCard');
 if (budgetCard) budgetCard.addEventListener('click', updateBudget);
+
+// ربط أحداث الأهداف
+const addGoalBtn = document.getElementById('addGoalBtn');
+if (addGoalBtn) addGoalBtn.addEventListener('click', openGoalModal);
+
+const closeGoalModalBtn = document.getElementById('closeGoalModal');
+if (closeGoalModalBtn) closeGoalModalBtn.addEventListener('click', closeGoalModal);
+
+const goalForm = document.getElementById('goalForm');
+if (goalForm) goalForm.addEventListener('submit', createGoal);
+
+window.addEventListener('click', (e) => {
+    const modal = document.getElementById('goalModal');
+    if (modal && e.target === modal) closeGoalModal();
+});
 
 // بدء التطبيق
 init();
