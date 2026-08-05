@@ -979,7 +979,9 @@ async function updateUserLanguage(lang) {
 
 // ===== تغيير اللغة (مع إعادة تحميل الصفحة) =====
 function changeLanguage(lang) {
+    // حفظ اللغة في localStorage
     setLang(lang);
+    // تحديث اتجاه الصفحة
     const html = document.documentElement;
     if (lang === 'ar') {
         html.setAttribute('dir', 'rtl');
@@ -988,9 +990,11 @@ function changeLanguage(lang) {
         html.setAttribute('dir', 'ltr');
         html.setAttribute('lang', lang);
     }
+    // تحديث على الخادم (إذا كان المستخدم مسجلاً)
     if (token) {
         updateUserLanguage(lang);
     }
+    // إعادة تحميل الصفحة لتطبيق جميع التغييرات
     window.location.reload();
 }
 
@@ -1030,14 +1034,21 @@ function filterTransactions() {
     renderTransactions(filtered);
 }
 
-// ===== التحقق من وجود توكن في URL (Google Auth) =====
-const urlParams = new URLSearchParams(window.location.search);
-const googleToken = urlParams.get('token');
-if (googleToken) {
-    token = googleToken;
-    localStorage.setItem('token', token);
-    window.history.replaceState({}, document.title, '/');
-    location.reload();
+// ===== تطبيق اللغة (بدون إعادة تحميل) =====
+function applyLanguage(lang) {
+    setLang(lang);
+    const html = document.documentElement;
+    if (lang === 'ar') {
+        html.setAttribute('dir', 'rtl');
+        html.setAttribute('lang', 'ar');
+    } else {
+        html.setAttribute('dir', 'ltr');
+        html.setAttribute('lang', lang);
+    }
+    applyTranslations();
+    // تحديث القائمة المنسدلة للغة (إذا كانت موجودة)
+    const selector = document.getElementById('langSelector');
+    if (selector) selector.value = lang;
 }
 
 // ===== دالة init الكاملة =====
@@ -1045,10 +1056,9 @@ async function init() {
     // 1. تهيئة الوضع (Dark/Light)
     initTheme();
 
-    // 2. تهيئة اللغة
+    // 2. تهيئة اللغة (دون إعادة تحميل)
     const savedLang = localStorage.getItem('lang') || 'ar';
-    document.getElementById('langSelector').value = savedLang;
-    changeLanguage(savedLang);
+    applyLanguage(savedLang);  // استخدم applyLanguage بدلاً من changeLanguage
 
     // 3. التحقق من وجود توكن (تسجيل الدخول)
     if (token) {
@@ -1121,9 +1131,13 @@ const addCategoryBtn = document.getElementById('addCategoryBtn');
 if (addCategoryBtn) addCategoryBtn.addEventListener('click', addCategory);
 
 const langSelector = document.getElementById('langSelector');
-if (langSelector) langSelector.addEventListener('change', (e) => {
-    changeLanguage(e.target.value);
-});
+if (langSelector) {
+    langSelector.addEventListener('change', (e) => {
+        const newLang = e.target.value;
+        // نستدعي changeLanguage (التي تعيد تحميل الصفحة) فقط عند تغيير المستخدم
+        changeLanguage(newLang);
+    });
+}
 
 const budgetCard = document.getElementById('budgetCard');
 if (budgetCard) budgetCard.addEventListener('click', updateBudget);
