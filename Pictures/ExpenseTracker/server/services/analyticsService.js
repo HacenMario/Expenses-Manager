@@ -260,7 +260,19 @@ function generateInsights(transactions, monthlyBudget, goals) {
 // ===== دالة رئيسية لتوليد جميع التحليلات =====
 function generateFullAnalytics(transactions, user) {
     const monthlyBudget = user.monthlyBudget || 1000;
-    const goals = []; // سيتم تمريرها من المسار
+    const goals = [];
+    
+    // حساب المصروفات والدخل
+    const expenseTransactions = transactions.filter(t => t.type === 'expense');
+    const incomeTransactions = transactions.filter(t => t.type === 'income');
+    
+    const totalExpenses = expenseTransactions.reduce((s, t) => s + t.amount, 0);
+    const totalIncome = incomeTransactions.reduce((s, t) => s + t.amount, 0);
+    const totalCount = transactions.length;
+    const expenseCount = expenseTransactions.length;
+    
+    // المتوسط الصحيح = إجمالي المصروفات / عدد معاملات المصروف
+    const averageExpense = expenseCount > 0 ? totalExpenses / expenseCount : 0;
 
     return {
         predictions: predictExpenses(transactions),
@@ -269,11 +281,12 @@ function generateFullAnalytics(transactions, user) {
         clusters: classifySpendingBehavior(transactions),
         insights: generateInsights(transactions, monthlyBudget, goals),
         summary: {
-            totalExpenses: transactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0),
-            totalIncome: transactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0),
-            transactionCount: transactions.length,
+            totalExpenses: totalExpenses,
+            totalIncome: totalIncome,
+            transactionCount: totalCount,
+            expenseCount: expenseCount,
             categories: [...new Set(transactions.map(t => t.category))],
-            averageExpense: ss.mean(transactions.filter(t => t.type === 'expense').map(t => t.amount)) || 0
+            averageExpense: averageExpense  // الآن يحسب بشكل صحيح
         }
     };
 }
