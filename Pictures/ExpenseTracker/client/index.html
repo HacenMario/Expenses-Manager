@@ -93,6 +93,77 @@
             </div>
         </section>
 
+        <!-- ===== لوحة التحكم المتقدمة (Widgets) ===== -->
+<section id="dashboard-widgets">
+    <div class="widgets-grid">
+        <div class="widget">
+            <div class="widget-icon" style="background: #667eea;">
+                <i class="fas fa-crown"></i>
+            </div>
+            <div class="widget-content">
+                <span class="widget-label" data-i18n="topCategory">أعلى فئة إنفاق</span>
+                <span class="widget-value" id="topCategoryName">-</span>
+                <span class="widget-sub" id="topCategoryAmount">0 DZD</span>
+            </div>
+        </div>
+        
+        <div class="widget">
+            <div class="widget-icon" style="background: #48bb78;">
+                <i class="fas fa-calendar-day"></i>
+            </div>
+            <div class="widget-content">
+                <span class="widget-label" data-i18n="dailyAverage">متوسط الإنفاق اليومي</span>
+                <span class="widget-value" id="dailyAverage">0 DZD</span>
+                <span class="widget-sub" data-i18n="thisMonth">هذا الشهر</span>
+            </div>
+        </div>
+        
+        <div class="widget">
+            <div class="widget-icon" style="background: #f6ad55;">
+                <i class="fas fa-coins"></i>
+            </div>
+            <div class="widget-content">
+                <span class="widget-label" data-i18n="savingsRate">نسبة الادخار</span>
+                <span class="widget-value" id="savingsRate">0%</span>
+                <span class="widget-sub" id="savingsAmount">0 DZD</span>
+            </div>
+        </div>
+        
+        <div class="widget">
+            <div class="widget-icon" style="background: #fc8181;">
+                <i class="fas fa-calendar-alt"></i>
+            </div>
+            <div class="widget-content">
+                <span class="widget-label" data-i18n="daysLeft">الأيام المتبقية</span>
+                <span class="widget-value" id="daysLeft">0</span>
+                <span class="widget-sub" data-i18n="untilMonthEnd">حتى نهاية الشهر</span>
+            </div>
+        </div>
+        
+        <div class="widget">
+            <div class="widget-icon" style="background: #9f7aea;">
+                <i class="fas fa-chart-line"></i>
+            </div>
+            <div class="widget-content">
+                <span class="widget-label" data-i18n="vsLastMonth">مقارنة بالشهر الماضي</span>
+                <span class="widget-value" id="comparison">0%</span>
+                <span class="widget-sub" id="comparisonLabel">بدون تغيير</span>
+            </div>
+        </div>
+        
+        <div class="widget">
+            <div class="widget-icon" style="background: #f687b3;">
+                <i class="fas fa-bullseye"></i>
+            </div>
+            <div class="widget-content">
+                <span class="widget-label" data-i18n="fastestGoal">أسرع هدف ادخار</span>
+                <span class="widget-value" id="fastestGoalName">-</span>
+                <span class="widget-sub" id="fastestGoalProgress">0%</span>
+            </div>
+        </div>
+    </div>
+</section>
+
         <!-- ===== شريط تقدم الميزانية ===== -->
 <section id="budget-progress">
     <div class="progress-header">
