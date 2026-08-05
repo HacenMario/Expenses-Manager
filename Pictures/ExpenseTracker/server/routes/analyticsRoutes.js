@@ -24,30 +24,25 @@ router.get('/insights', protect, async (req, res) => {
             return res.status(200).json({
                 success: true,
                 data: {
-                    message: 'لا توجد بيانات كافية للتحليل (تحتاج 5 معاملات على الأقل)',
-                    insights: [{
-                        type: 'info',
-                        title: '📊 بيانات غير كافية',
-                        description: 'قم بإضافة المزيد من المعاملات للحصول على تحليلات متقدمة',
-                        action: 'أضف 5 معاملات على الأقل للحصول على تحليلات دقيقة'
-                    }],
+                    message: 'insufficient_data',
+                    insights: [],
                     summary: {
-                        totalExpenses: transactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0),
-                        totalIncome: transactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0),
-                        transactionCount: transactions.length
+                        totalExpenses: 0,
+                        totalIncome: 0,
+                        transactionCount: 0,
+                        expenseCount: 0,
+                        averageExpense: 0
                     }
                 }
             });
         }
 
         const analytics = generateFullAnalytics(transactions, user);
-        analytics.insights = generateInsights(transactions, user.monthlyBudget || 1000, goals);
+        // دمج الأهداف في التوصيات (نمررها إلى الخدمة)
+        analytics.insights = require('../services/analyticsService')
+            .generateInsights(transactions, user.monthlyBudget || 1000, goals, user.language || 'ar');
 
-        res.status(200).json({
-            success: true,
-            data: analytics
-        });
-
+        res.status(200).json({ success: true, data: analytics });
     } catch (error) {
         console.error('❌ Analytics error:', error.message);
         res.status(500).json({ success: false, message: error.message });
