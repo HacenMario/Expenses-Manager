@@ -865,10 +865,44 @@ async function loadDashboard() {
         if (data.success) {
             const d = data.data;
             
-            // 1. أعلى فئة إنفاق
-            document.getElementById('topCategoryName').textContent = d.topCategory.name || '-';
+            // 1. أعلى فئة إنفاق (مع الترجمة)
+            let categoryName = d.topCategory.name || '-';
+            if (categoryName !== '-') {
+                // محاولة العثور على الترجمة
+                const defaultKeysMap = {
+                    'طعام': 'Food',
+                    'مواصلات': 'Transport',
+                    'كتب': 'Books',
+                    'مستلزمات': 'Supplies',
+                    'ترفيه': 'Entertainment',
+                    'إيجار': 'Rent',
+                    'فواتير': 'Utilities',
+                    'صحة': 'Healthcare',
+                    'أخرى': 'Other'
+                };
+                
+                let engKey = null;
+                for (const [ar, en] of Object.entries(defaultKeysMap)) {
+                    if (categoryName === ar || categoryName === en) {
+                        engKey = en;
+                        break;
+                    }
+                }
+                if (!engKey) {
+                    for (const [en, translated] of Object.entries(t('defaultCategories'))) {
+                        if (categoryName === translated) {
+                            engKey = en;
+                            break;
+                        }
+                    }
+                }
+                if (engKey) {
+                    categoryName = t(`defaultCategories.${engKey}`);
+                }
+            }
+            document.getElementById('topCategoryName').textContent = categoryName;
             document.getElementById('topCategoryAmount').textContent = 
-                d.topCategory.amount > 0 ? `${d.topCategory.amount.toFixed(0)} ${CURRENCY} (${d.topCategory.percentage.toFixed(1)}%)` : '0 DZD';
+                d.topCategory.amount > 0 ? `${d.topCategory.amount.toFixed(0)} ${CURRENCY} (${d.topCategory.percentage.toFixed(1)}%)` : `0 ${CURRENCY}`;
             
             // 2. متوسط الإنفاق اليومي
             document.getElementById('dailyAverage').textContent = `${d.dailyAverage.toFixed(0)} ${CURRENCY}`;
