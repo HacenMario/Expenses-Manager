@@ -114,6 +114,86 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
+// ===== التخزين المؤقت للطلبات (للعمل دون اتصال) =====
+const DB_NAME = 'expense-tracker-offline';
+const STORE_NAME = 'pending-requests';
+let db = null;
+
+// فتح قاعدة البيانات
+function openDB() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, 1);
+        request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains(STORE_NAME)) {
+                db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
+            }
+        };
+        request.onsuccess = (event) => resolve(event.target.result);
+        request.onerror = (event) => reject(event.target.error);
+    });
+}
+
+// حفظ طلب للتنفيذ لاحقاً
+async function savePendingRequest(url, options) {
+    try {
+        if (!db) db = await openDB();
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        const store = tx.objectStore(STORE_NAME);
+        await store.add({ url, options, timestamp: Date.now() });
+        console.log('📥 Pending request saved');
+    } catch (error) {
+        console.error('❌ Save pending request failed:', error);
+    }
+}
+
+// مزامنة الطلبات المعلقة
+async function syncPendingRequests() {
+    try {
+        if (!db) db = await openDB();
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        const store = tx.objectStore(STORE_NAME);
+        const requests = await new Promise((resolve) => {
+            const result = [];
+            const cursor = store.openCursor();
+            cursor.onsuccess = (event) => {
+                const cursor = event.target.result;
+                if (cursor) {
+                    result.push(cursor.value);
+                    cursor.continue();
+                } else {
+                    resolve(result);
+                }
+            };
+        });
+        
+        console.log(`🔄 Syncing ${requests.length} pending requests`);
+        
+        for (const req of requests) {
+            try {
+                const response = await fetch(req.url, req.options);
+                if (response.ok) {
+                    // حذف الطلب بعد نجاحه
+                    const deleteTx = db.transaction(STORE_NAME, 'readwrite');
+                    const deleteStore = deleteTx.objectStore(STORE_NAME);
+                    await deleteStore.delete(req.id);
+                    console.log(`✅ Synced request ${req.id}`);
+                }
+            } catch (error) {
+                console.error(`❌ Sync failed for request ${req.id}:`, error);
+            }
+        }
+    } catch (error) {
+        console.error('❌ Sync error:', error);
+    }
+}
+
+// الاستماع لحالة الشبكة
+self.addEventListener('online', () => {
+    console.log('🔄 Network is back online - syncing...');
+    syncPendingRequests();
+});
+
 // ===== استقبال رسائل من التطبيق =====
 self.addEventListener('message', (event) => {
   console.log('[SW] Received message:', event.data);
