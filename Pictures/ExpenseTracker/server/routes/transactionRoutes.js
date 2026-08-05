@@ -349,4 +349,33 @@ router.get('/dashboard', protect, async (req, res) => {
     }
 });
 
+// ===== مزامنة المعاملات دون اتصال =====
+router.post('/sync', protect, async (req, res) => {
+    try {
+        const { pendingTransactions } = req.body;
+        let created = 0;
+        
+        for (const tx of pendingTransactions) {
+            const { description, amount, category, type, date } = tx;
+            await Transaction.create({
+                user: req.user.id,
+                description,
+                amount,
+                category,
+                type,
+                date: date || new Date()
+            });
+            created++;
+        }
+        
+        res.status(200).json({
+            success: true,
+            message: `${created} transactions synced successfully`,
+            count: created
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
 module.exports = router;
