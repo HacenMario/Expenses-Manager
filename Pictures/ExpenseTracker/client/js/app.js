@@ -233,6 +233,9 @@ function renderCategories() {
 }
 
 function populateCategorySelects() {
+    // تعريف defaultKeys داخل الدالة
+    const defaultKeys = ['Food', 'Transport', 'Books', 'Supplies', 'Entertainment', 'Rent', 'Utilities', 'Healthcare', 'Other'];
+    
     const select = document.getElementById('category');
     const filterSelect = document.getElementById('filterCategory');
     
@@ -250,7 +253,6 @@ function populateCategorySelects() {
         });
         
         // الفئات الافتراضية (مترجمة)
-        const defaultKeys = ['Food', 'Transport', 'Books', 'Supplies', 'Entertainment', 'Rent', 'Utilities', 'Healthcare', 'Other'];
         defaultKeys.forEach(key => {
             const translatedName = t(`defaultCategories.${key}`);
             // نضيفها فقط إذا لم تكن موجودة في الفئات المخصصة
@@ -1065,10 +1067,10 @@ function applyLanguage(lang) {
     }
     applyTranslations();
     
-    // ===== تحديث القوائم المنسدلة للفئات =====
-    populateCategorySelects();
+    // تحديث القوائم المنسدلة للفئات
+    populateCategorySelects();  // هذه الدالة تحتاج إلى defaultKeys معرف داخلها
     
-    // ===== إعادة عرض الجدول لتحديث أسماء الفئات =====
+    // إعادة عرض الجدول
     renderTransactions(transactions);
     
     // تحديث القائمة المنسدلة للغة
