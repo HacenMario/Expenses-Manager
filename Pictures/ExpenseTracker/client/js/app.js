@@ -839,6 +839,96 @@ function exportCSV() {
     document.body.removeChild(link);
 }
 
+// ===== تحميل بيانات لوحة التحكم =====
+async function loadDashboard() {
+    try {
+        const res = await fetch(`${API}/transactions/dashboard`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (data.success) {
+            const d = data.data;
+            
+            // 1. أعلى فئة إنفاق
+            document.getElementById('topCategoryName').textContent = d.topCategory.name || '-';
+            document.getElementById('topCategoryAmount').textContent = 
+                d.topCategory.amount > 0 ? `${d.topCategory.amount.toFixed(0)} ${CURRENCY} (${d.topCategory.percentage.toFixed(1)}%)` : '0 DZD';
+            
+            // 2. متوسط الإنفاق اليومي
+            document.getElementById('dailyAverage').textContent = `${d.dailyAverage.toFixed(0)} ${CURRENCY}`;
+            
+            // 3. نسبة الادخار
+            document.getElementById('savingsRate').textContent = `${d.savingsRate.toFixed(1)}%`;
+            const savingsAmount = d.thisMonthIncome - d.thisMonthExpenses;
+            document.getElementById('savingsAmount').textContent = `${savingsAmount.toFixed(0)} ${CURRENCY}`;
+            
+            // 4. الأيام المتبقية
+            document.getElementById('daysLeft').textContent = d.daysLeft;
+            
+            // 5. مقارنة بالشهر الماضي
+            const comparisonEl = document.getElementById('comparison');
+            const comparisonLabel = document.getElementById('comparisonLabel');
+            if (d.comparison > 0) {
+                comparisonEl.textContent = `+${d.comparison.toFixed(1)}%`;
+                comparisonEl.style.color = '#fc8181';
+                comparisonLabel.textContent = t('moreThanLastMonth') || 'أكثر من الشهر الماضي';
+            } else if (d.comparison < 0) {
+                comparisonEl.textContent = `${d.comparison.toFixed(1)}%`;
+                comparisonEl.style.color = '#48bb78';
+                comparisonLabel.textContent = t('lessThanLastMonth') || 'أقل من الشهر الماضي';
+            } else {
+                comparisonEl.textContent = '0%';
+                comparisonEl.style.color = '#718096';
+                comparisonLabel.textContent = t('sameAsLastMonth') || 'مثل الشهر الماضي';
+            }
+            
+            // 6. أسرع هدف ادخار
+            if (d.fastestGoal) {
+                document.getElementById('fastestGoalName').textContent = d.fastestGoal.name;
+                document.getElementById('fastestGoalProgress').textContent = 
+                    `${d.fastestGoal.progress.toFixed(0)}% (${d.fastestGoal.currentAmount.toFixed(0)}/${d.fastestGoal.targetAmount.toFixed(0)} ${CURRENCY})`;
+            } else {
+                document.getElementById('fastestGoalName').textContent = t('noGoals') || 'لا توجد أهداف';
+                document.getElementById('fastestGoalProgress').textContent = '-';
+            }
+        }
+    } catch (err) {
+        console.error('Error loading dashboard:', err);
+    }
+}
+
+// ===== مزامنة دون اتصال =====
+async function syncOfflineData() {
+    if (navigator.onLine) {
+        try {
+            const res = await fetch(`${API}/transactions/sync`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ 
+                    pendingTransactions: JSON.parse(localStorage.getItem('pendingTransactions') || '[]')
+                })
+            });
+            if (res.ok) {
+                localStorage.removeItem('pendingTransactions');
+                console.log('✅ Offline data synced successfully');
+            }
+        } catch (error) {
+            console.error('❌ Sync failed:', error);
+        }
+    }
+}
+
+// ===== تخزين معاملة مؤقتاً (عند عدم وجود اتصال) =====
+function saveTransactionOffline(transaction) {
+    const pending = JSON.parse(localStorage.getItem('pendingTransactions') || '[]');
+    pending.push({ ...transaction, _id: Date.now(), pending: true });
+    localStorage.setItem('pendingTransactions', JSON.stringify(pending));
+    console.log('💾 Transaction saved offline');
+}
+
 // ===== التصفية والبحث =====
 function filterTransactions() {
     const search = document.getElementById('searchInput').value.toLowerCase();
@@ -950,7 +1040,9 @@ async function init() {
         await loadTransactions();
         await loadSummary();
         await loadSettings();
-        await loadGoals(); // ← تم إضافة هذا السطر هنا
+        await loadGoals();
+        await loadDashboard();
+
     } else {
         document.getElementById('app').style.display = 'none';
         document.getElementById('loginPage').style.display = 'block';
