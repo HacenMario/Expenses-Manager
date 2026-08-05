@@ -251,4 +251,102 @@ router.get('/summary', protect, async (req, res) => {
     }
 });
 
+// ===== Dashboard Widgets =====
+router.get('/dashboard', protect, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id);
+        const transactions = await Transaction.find({ user: req.user.id });
+        
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+        
+        // 1. مصروفات الشهر الحالي
+        const thisMonthExpenses = transactions
+            .filter(t => t.type === 'expense' && new Date(t.date) >= startOfMonth)
+            .reduce((sum, t) => sum + t.amount, 0);
+        
+        // 2. مصروفات الشهر الماضي
+        const lastMonthExpenses = transactions
+            .filter(t => t.type === 'expense' && new Date(t.date) >= startOfLastMonth && new Date(t.date) <= endOfLastMonth)
+            .reduce((sum, t) => sum + t.amount, 0);
+        
+        // 3. دخل الشهر الحالي
+        const thisMonthIncome = transactions
+            .filter(t => t.type === 'income' && new Date(t.date) >= startOfMonth)
+            .reduce((sum, t) => sum + t.amount, 0);
+        
+        // 4. أعلى فئة إنفاق
+        const categoryTotals = {};
+        transactions
+            .filter(t => t.type === 'expense' && new Date(t.date) >= startOfMonth)
+            .forEach(t => {
+                categoryTotals[t.category] = (categoryTotals[t.category] || 0) + t.amount;
+            });
+        
+        let topCategory = { name: 'لا توجد', amount: 0, percentage: 0 };
+        const totalExpenses = Object.values(categoryTotals).reduce((a, b) => a + b, 0);
+        for (const [name, amount] of Object.entries(categoryTotals)) {
+            if (amount > topCategory.amount) {
+                topCategory = { 
+                    name, 
+                    amount, 
+                    percentage: totalExpenses > 0 ? (amount / totalExpenses) * 100 : 0 
+                };
+            }
+        }
+        
+        // 5. متوسط الإنفاق اليومي
+        const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+        const dailyAverage = daysInMonth > 0 ? thisMonthExpenses / daysInMonth : 0;
+        
+        // 6. نسبة الادخار
+        const savingsRate = thisMonthIncome > 0 ? ((thisMonthIncome - thisMonthExpenses) / thisMonthIncome) * 100 : 0;
+        
+        // 7. مقارنة مع الشهر الماضي
+        const comparison = lastMonthExpenses > 0 
+            ? ((thisMonthExpenses - lastMonthExpenses) / lastMonthExpenses) * 100 
+            : 0;
+        
+        // 8. أسرع هدف ادخار
+        const goals = await SavingGoal.find({ user: req.user.id, isCompleted: false });
+        let fastestGoal = null;
+        let bestProgress = 0;
+        for (const goal of goals) {
+            const progress = goal.targetAmount > 0 ? (goal.currentAmount / goal.targetAmount) * 100 : 0;
+            if (progress > bestProgress) {
+                bestProgress = progress;
+                fastestGoal = goal;
+            }
+        }
+        
+        // 9. عدد الأيام المتبقية في الشهر
+        const daysLeft = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate() - now.getDate();
+        
+        res.status(200).json({
+            success: true,
+            data: {
+                thisMonthExpenses,
+                thisMonthIncome,
+                lastMonthExpenses,
+                topCategory,
+                dailyAverage,
+                savingsRate: Math.max(savingsRate, 0),
+                comparison,
+                fastestGoal: fastestGoal ? {
+                    name: fastestGoal.name,
+                    progress: bestProgress,
+                    currentAmount: fastestGoal.currentAmount,
+                    targetAmount: fastestGoal.targetAmount
+                } : null,
+                daysLeft,
+                transactionCount: transactions.length
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
 module.exports = router;
