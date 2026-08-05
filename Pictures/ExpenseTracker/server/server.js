@@ -11,31 +11,6 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ===== إعدادات PWA =====
-// تقديم ملف manifest.json
-app.get('/manifest.json', (req, res) => {
-    res.sendFile(path.join(__dirname, '../client/manifest.json'));
-});
-
-// تقديم Service Worker
-app.get('/sw.js', (req, res) => {
-    res.setHeader('Content-Type', 'application/javascript');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.sendFile(path.join(__dirname, '../client/sw.js'));
-});
-
-// تقديم أيقونات PWA
-app.get('/icons/:icon', (req, res) => {
-    const iconName = req.params.icon;
-    const iconPath = path.join(__dirname, '../client/icons', iconName);
-    res.sendFile(iconPath);
-});
-
-// تقديم صفحة offline
-app.get('/offline.html', (req, res) => {
-    res.sendFile(path.join(__dirname, '../client/offline.html'));
-});
-
 // تقديم الملفات الثابتة من مجلد client
 app.use(express.static(path.join(__dirname, '../client')));
 
@@ -43,7 +18,6 @@ app.use(express.static(path.join(__dirname, '../client')));
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/transactions', require('./routes/transactionRoutes'));
 app.use('/api/categories', require('./routes/categoryRoutes'));
-app.use('/api/goals', require('./routes/savingGoalRoutes'));
 
 // معالجة طلب favicon (إذا لم يكن الملف موجوداً)
 app.get('/favicon.ico', (req, res) => {
