@@ -44,6 +44,7 @@ app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/transactions', require('./routes/transactionRoutes'));
 app.use('/api/categories', require('./routes/categoryRoutes'));
 app.use('/api/goals', require('./routes/savingGoalRoutes'));
+app.use('/api/analytics', require('./routes/analyticsRoutes'));
 
 // معالجة طلب favicon (إذا لم يكن الملف موجوداً)
 app.get('/favicon.ico', (req, res) => {
