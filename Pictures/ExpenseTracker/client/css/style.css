@@ -1743,3 +1743,240 @@ html[lang="fr"] #transactions-list td {
         grid-template-columns: 1fr;
     }
 }
+
+/* ===== قسم التحليلات ===== */
+#analytics-section {
+    margin: 30px 0;
+    padding: 20px;
+    background: var(--bg-card, #fff);
+    border-radius: 16px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    border: 1px solid var(--border-light, #f0f0f0);
+}
+
+#analytics-section h2 {
+    margin-bottom: 20px;
+    color: var(--text-primary, #1a202c);
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+#analytics-section h2 i {
+    color: #667eea;
+}
+
+.analytics-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.analytics-grid .insights-section {
+    grid-column: 1 / -1;
+}
+
+.analytics-grid .summary-section {
+    grid-column: 1 / -1;
+}
+
+/* ===== بطاقات التوصيات ===== */
+.insight-card {
+    background: var(--bg-input, #f7fafc);
+    padding: 16px 20px;
+    border-radius: 12px;
+    margin-bottom: 12px;
+    border-left: 4px solid #667eea;
+    transition: all 0.2s ease;
+}
+
+.insight-card:hover {
+    transform: translateX(4px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.insight-card.insight-warning { border-left-color: #f6ad55; }
+.insight-card.insight-danger { border-left-color: #fc8181; }
+.insight-card.insight-success { border-left-color: #48bb78; }
+.insight-card.insight-suggestion { border-left-color: #9f7aea; }
+.insight-card.insight-info { border-left-color: #667eea; }
+
+.insight-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 4px;
+}
+
+.insight-title {
+    font-weight: 600;
+    color: var(--text-primary, #1a202c);
+}
+
+.insight-description {
+    color: var(--text-secondary, #4a5568);
+    font-size: 14px;
+    margin: 4px 0;
+    line-height: 1.5;
+}
+
+.insight-action {
+    font-size: 13px;
+    color: #667eea;
+    margin-top: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* ===== التنبؤات ===== */
+.prediction-card,
+.anomalies-card,
+.correlations-card,
+.summary-card {
+    background: var(--bg-input, #f7fafc);
+    padding: 16px 20px;
+    border-radius: 12px;
+    border: 1px solid var(--border-light, #f0f0f0);
+}
+
+.prediction-card h4,
+.anomalies-card h4,
+.correlations-card h4,
+.summary-card h4 {
+    margin-bottom: 12px;
+    color: var(--text-primary, #1a202c);
+    font-size: 15px;
+}
+
+.prediction-total {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 8px 0;
+}
+
+.prediction-amount {
+    font-size: 22px;
+    font-weight: 700;
+    color: #667eea;
+}
+
+.prediction-confidence {
+    font-size: 13px;
+    color: #48bb78;
+}
+
+.prediction-trend {
+    font-size: 14px;
+    color: var(--text-secondary, #4a5568);
+}
+
+/* ===== الشذوذ ===== */
+.anomaly-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--border-light, #f0f0f0);
+}
+.anomaly-item:last-child { border-bottom: none; }
+
+.anomaly-amount {
+    color: #fc8181;
+    font-weight: 600;
+}
+
+.anomaly-reason {
+    font-size: 11px;
+    color: #999;
+    background: #edf2f7;
+    padding: 2px 10px;
+    border-radius: 12px;
+}
+
+/* ===== الارتباطات ===== */
+.correlation-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 0;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.correlation-strength {
+    font-size: 11px;
+    padding: 2px 12px;
+    border-radius: 12px;
+    background: #edf2f7;
+    color: #4a5568;
+}
+
+.correlation-type {
+    font-size: 11px;
+    color: #718096;
+}
+
+/* ===== الملخص ===== */
+.summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+}
+
+.summary-grid div {
+    display: flex;
+    flex-direction: column;
+    padding: 8px 12px;
+    background: var(--bg-card, #fff);
+    border-radius: 8px;
+    text-align: center;
+}
+
+.summary-grid div span {
+    font-size: 12px;
+    color: var(--text-muted, #718096);
+}
+
+.summary-grid div strong {
+    font-size: 16px;
+    color: var(--text-primary, #1a202c);
+    margin-top: 2px;
+}
+
+/* ===== رسائل الخطأ ===== */
+.analytics-error {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 20px;
+    background: #fff5f5;
+    border-radius: 12px;
+    color: #c53030;
+    border: 1px solid #fc8181;
+}
+
+.analytics-error i {
+    font-size: 24px;
+}
+
+/* ===== تحسين التجاوب ===== */
+@media (max-width: 768px) {
+    .analytics-grid {
+        grid-template-columns: 1fr;
+    }
+    .summary-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+    .prediction-total {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+    }
+    .anomaly-item {
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+}
