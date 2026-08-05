@@ -412,6 +412,18 @@ async function addTransaction(e) {
     submitBtn.innerHTML = '⏳ جاري الإضافة...';
 
     try {
+        if (!navigator.onLine) {
+            // ✅ وضع دون اتصال - تخزين محلياً
+            const transaction = { description: desc, amount, category, type, date: new Date().toISOString() };
+            saveTransactionOffline(transaction);
+            alert('💾 تم حفظ المعاملة محلياً. سيتم مزامنتها عند استعادة الاتصال.');
+            document.getElementById('transactionForm').reset();
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+            return;
+        }
+
+        // ✅ وضع الاتصال العادي
         const res = await fetch(`${API}/transactions`, {
             method: 'POST',
             headers: {
@@ -422,11 +434,11 @@ async function addTransaction(e) {
         });
 
         const result = await res.json();
-
         if (result.success) {
             document.getElementById('transactionForm').reset();
             await loadTransactions();
             await loadSummary();
+            await loadDashboard();
 
             if (result.isOverBudget) {
                 const overspent = (result.totalExpenses - result.monthlyBudget).toFixed(0);
@@ -441,7 +453,11 @@ async function addTransaction(e) {
         }
     } catch (error) {
         console.error('Error adding transaction:', error);
-        alert('❌ ' + t('serverError'));
+        // حفظ المعاملة محلياً عند فشل الاتصال
+        const transaction = { description: desc, amount, category, type, date: new Date().toISOString() };
+        saveTransactionOffline(transaction);
+        alert('💾 تم حفظ المعاملة محلياً. سيتم مزامنتها عند استعادة الاتصال.');
+        document.getElementById('transactionForm').reset();
     } finally {
         submitBtn.disabled = false;
         submitBtn.innerHTML = originalText;
@@ -1107,9 +1123,20 @@ if (closeGoalModalBtn) closeGoalModalBtn.addEventListener('click', closeGoalModa
 const goalForm = document.getElementById('goalForm');
 if (goalForm) goalForm.addEventListener('submit', createGoal);
 
+// التحقق من وجود بيانات غير متزامنة عند بدء التطبيق
+const pending = JSON.parse(localStorage.getItem('pendingTransactions') || '[]');
+if (pending.length > 0 && navigator.onLine) {
+    syncOfflineData();
+}
+
 window.addEventListener('click', (e) => {
     const modal = document.getElementById('goalModal');
     if (modal && e.target === modal) closeGoalModal();
+});
+
+window.addEventListener('online', () => {
+    console.log('🔄 Network connected - syncing offline data');
+    syncOfflineData();
 });
 
 // بدء التطبيق
