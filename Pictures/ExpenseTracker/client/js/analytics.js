@@ -47,9 +47,8 @@ function renderAnalytics(analytics) {
     const container = document.getElementById('analyticsContainer');
     if (!container) return;
 
-    // التحقق من وجود البيانات الأساسية
     if (!analytics || typeof analytics !== 'object') {
-        container.innerHTML = `<p style="color:#999;">لا توجد بيانات تحليلية متاحة</p>`;
+        container.innerHTML = `<p style="color:#999;">${t('noAnalyticsData')}</p>`;
         return;
     }
 
@@ -58,9 +57,9 @@ function renderAnalytics(analytics) {
     if (Array.isArray(analytics.insights) && analytics.insights.length > 0) {
         insightsHtml = analytics.insights.map(i => {
             const type = i.type || 'info';
-            const title = i.title || 'توصية';
-            const description = i.description || 'لا توجد تفاصيل';
-            const action = i.action || 'لا يوجد إجراء مقترح';
+            const title = i.title || t('noInsights');
+            const description = i.description || '';
+            const action = i.action || '';
             return `
                 <div class="insight-card insight-${type}">
                     <div class="insight-header">
@@ -75,7 +74,7 @@ function renderAnalytics(analytics) {
             `;
         }).join('');
     } else {
-        insightsHtml = `<p style="color:#999;">لا توجد توصيات حالياً</p>`;
+        insightsHtml = `<p style="color:#999;">${t('noInsights')}</p>`;
     }
 
     // ===== 2. التنبؤات =====
@@ -83,20 +82,18 @@ function renderAnalytics(analytics) {
     const predictions = analytics.predictions;
     if (predictions && typeof predictions === 'object') {
         const nextMonthTotal = predictions.nextMonthTotal;
-        const confidence = predictions.confidence;
-        // التحقق من وجود القيم وأنها أرقام
         if (typeof nextMonthTotal === 'number' && isFinite(nextMonthTotal)) {
-            const conf = (typeof confidence === 'number' && isFinite(confidence)) ? confidence : 0;
-            const trend = predictions.trend === 'increasing' ? '📈 صاعد' :
-                          predictions.trend === 'decreasing' ? '📉 هابط' : 'متذبذب';
+            const conf = (typeof predictions.confidence === 'number' && isFinite(predictions.confidence)) ? predictions.confidence : 0;
+            const trend = predictions.trend === 'increasing' ? t('trendUp') :
+                          predictions.trend === 'decreasing' ? t('trendDown') : t('trendStable');
             predictionsHtml = `
                 <div class="prediction-card">
-                    <h4>📊 توقع المصروفات للشهر القادم</h4>
+                    <h4>${t('predictionTitle')}</h4>
                     <div class="prediction-total">
                         <span class="prediction-amount">${safeToFixed(nextMonthTotal)} DZD</span>
-                        <span class="prediction-confidence">دقة: ${safeToFixed(conf)}%</span>
+                        <span class="prediction-confidence">${t('confidenceLevel')}: ${safeToFixed(conf)}%</span>
                     </div>
-                    <div class="prediction-trend">الاتجاه: ${trend}</div>
+                    <div class="prediction-trend">${t('trend')}: ${trend}</div>
                 </div>
             `;
         }
@@ -108,11 +105,15 @@ function renderAnalytics(analytics) {
     if (Array.isArray(anomalies) && anomalies.length > 0) {
         anomaliesHtml = `
             <div class="anomalies-card">
-                <h4>🚨 المعاملات غير الطبيعية</h4>
+                <h4>${t('anomaliesTitle')}</h4>
                 ${anomalies.slice(0, 5).map(a => {
                     const desc = a.description || 'معاملة غير معروفة';
                     const amount = (typeof a.amount === 'number' && isFinite(a.amount)) ? a.amount : 0;
-                    const reason = a.reason || 'غير محدد';
+                    let reason = a.reason || 'غير محدد';
+                    // ترجمة أسباب الشذوذ
+                    if (reason.includes('أعلى')) reason = t('anomalyReasonHigh');
+                    else if (reason.includes('أقل')) reason = t('anomalyReasonLow');
+                    else if (reason.includes('Z-Score')) reason = t('anomalyReasonZScore');
                     return `
                         <div class="anomaly-item">
                             <span>${desc}</span>
@@ -131,12 +132,19 @@ function renderAnalytics(analytics) {
     if (Array.isArray(correlations) && correlations.length > 0) {
         correlationsHtml = `
             <div class="correlations-card">
-                <h4>🔗 العلاقات بين الفئات</h4>
+                <h4>${t('correlationsTitle')}</h4>
                 ${correlations.slice(0, 3).map(c => {
                     const cat1 = c.category1 || '?';
                     const cat2 = c.category2 || '?';
-                    const strength = c.strength || 'ضعيفة';
-                    const type = c.type || 'غير معروف';
+                    let strength = c.strength || t('correlationStrengthWeak');
+                    // ترجمة قوة الارتباط
+                    if (strength.includes('قوية')) strength = t('correlationStrengthStrong');
+                    else if (strength.includes('متوسطة')) strength = t('correlationStrengthMedium');
+                    else strength = t('correlationStrengthWeak');
+                    
+                    let type = c.type || t('correlationTypePositive');
+                    if (type.includes('طردية') || type.includes('Positive')) type = t('correlationTypePositive');
+                    else if (type.includes('عكسية') || type.includes('Negative')) type = t('correlationTypeNegative');
                     return `
                         <div class="correlation-item">
                             <span>${cat1} ↔ ${cat2}</span>
@@ -150,29 +158,28 @@ function renderAnalytics(analytics) {
     }
 
     // ===== 5. الملخص =====
-let summaryHtml = '';
-const summary = analytics.summary;
-if (summary && typeof summary === 'object') {
-    const totalExpenses = (typeof summary.totalExpenses === 'number' && isFinite(summary.totalExpenses)) ? summary.totalExpenses : 0;
-    const totalIncome = (typeof summary.totalIncome === 'number' && isFinite(summary.totalIncome)) ? summary.totalIncome : 0;
-    const transactionCount = summary.transactionCount || 0;
-    const expenseCount = summary.expenseCount || 0;
-    // استخدام المتوسط المحسوب من الخادم مباشرة
-    const avgExpense = (typeof summary.averageExpense === 'number' && isFinite(summary.averageExpense)) ? summary.averageExpense : 0;
+    let summaryHtml = '';
+    const summary = analytics.summary;
+    if (summary && typeof summary === 'object') {
+        const totalExpenses = (typeof summary.totalExpenses === 'number' && isFinite(summary.totalExpenses)) ? summary.totalExpenses : 0;
+        const totalIncome = (typeof summary.totalIncome === 'number' && isFinite(summary.totalIncome)) ? summary.totalIncome : 0;
+        const transactionCount = summary.transactionCount || 0;
+        const expenseCount = summary.expenseCount || 0;
+        const avgExpense = (typeof summary.averageExpense === 'number' && isFinite(summary.averageExpense)) ? summary.averageExpense : 0;
 
-    summaryHtml = `
-        <div class="summary-card">
-            <h4>📋 ملخص سريع</h4>
-            <div class="summary-grid">
-                <div><span>المصروفات الكلية</span> <strong>${safeToFixed(totalExpenses)} DZD</strong></div>
-                <div><span>الدخل الكلي</span> <strong>${safeToFixed(totalIncome)} DZD</strong></div>
-                <div><span>عدد المعاملات</span> <strong>${transactionCount}</strong></div>
-                <div><span>عدد معاملات المصروف</span> <strong>${expenseCount}</strong></div>
-                <div><span>متوسط الإنفاق لكل معاملة مصروف</span> <strong>${safeToFixed(avgExpense)} DZD</strong></div>
+        summaryHtml = `
+            <div class="summary-card">
+                <h4>${t('summaryTitle')}</h4>
+                <div class="summary-grid">
+                    <div><span>${t('totalExpenses')}</span> <strong>${safeToFixed(totalExpenses)} DZD</strong></div>
+                    <div><span>${t('totalIncome')}</span> <strong>${safeToFixed(totalIncome)} DZD</strong></div>
+                    <div><span>${t('transactionCount')}</span> <strong>${transactionCount}</strong></div>
+                    <div><span>${t('expenseCount')}</span> <strong>${expenseCount}</strong></div>
+                    <div><span>${t('averageExpense')}</span> <strong>${safeToFixed(avgExpense)} DZD</strong></div>
+                </div>
             </div>
-        </div>
-    `;
-}
+        `;
+    }
 
     // ===== تجميع كل الأقسام =====
     container.innerHTML = `
