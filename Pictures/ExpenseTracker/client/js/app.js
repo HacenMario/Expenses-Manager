@@ -204,7 +204,7 @@ async function loadCategories() {
         if (data.success) {
             categories = data.data;
             renderCategories();
-            populateCategorySelects();
+            populateCategorySelects(); // تأكد من استدعائها هنا
         }
     } catch (err) { console.error('خطأ في تحميل الفئات', err); }
 }
@@ -234,50 +234,53 @@ function renderCategories() {
 
 function populateCategorySelects() {
     const select = document.getElementById('category');
-    const currentVal = select.value;
-    select.innerHTML = `<option value="">${t('selectCategory')}</option>`;
-
-    // 1. إضافة الفئات المخصصة (المخزنة في قاعدة البيانات)
-    categories.forEach(c => {
-        const icon = c.icon || '📁';
-        select.innerHTML += `<option value="${c.name}">${icon} ${c.name}</option>`;
-    });
-
-    // 2. إضافة الفئات الافتراضية مع الترجمة والأيقونة المناسبة
-    const defaultKeys = ['Food', 'Transport', 'Books', 'Supplies', 'Entertainment', 'Rent', 'Utilities', 'Healthcare', 'Other'];
-    defaultKeys.forEach(key => {
-        // الاسم المترجم للعرض في القائمة
-        const translatedName = t(`defaultCategories.${key}`);
-        // الأيقونة المناسبة من القاموس
-        const icon = DEFAULT_CATEGORY_ICONS[key] || '📁';
-
-        // نتأكد من عدم إضافة الفئة إذا كانت موجودة بالفعل في الفئات المخصصة
-        if (!categories.some(c => c.name === translatedName)) {
-            select.innerHTML += `<option value="${translatedName}">${icon} ${translatedName}</option>`;
-        }
-    });
-
-    if (currentVal) select.value = currentVal;
-
-    // ===== نفس الشيء لقائمة التصفية =====
     const filterSelect = document.getElementById('filterCategory');
-    const filterVal = filterSelect.value;
-    filterSelect.innerHTML = `<option value="">${t('allCategories')}</option>`;
+    
+    // حفظ القيم الحالية
+    const currentVal = select ? select.value : '';
+    const filterVal = filterSelect ? filterSelect.value : '';
 
-    categories.forEach(c => {
-        const icon = c.icon || '📁';
-        filterSelect.innerHTML += `<option value="${c.name}">${icon} ${c.name}</option>`;
-    });
+    // تعبئة select إضافة المعاملة
+    if (select) {
+        select.innerHTML = `<option value="">${t('selectCategory')}</option>`;
+        
+        // الفئات المخصصة (من قاعدة البيانات)
+        categories.forEach(c => {
+            select.innerHTML += `<option value="${c.name}">${c.icon || '📁'} ${c.name}</option>`;
+        });
+        
+        // الفئات الافتراضية (مترجمة)
+        const defaultKeys = ['Food', 'Transport', 'Books', 'Supplies', 'Entertainment', 'Rent', 'Utilities', 'Healthcare', 'Other'];
+        defaultKeys.forEach(key => {
+            const translatedName = t(`defaultCategories.${key}`);
+            // نضيفها فقط إذا لم تكن موجودة في الفئات المخصصة
+            if (!categories.some(c => c.name === translatedName)) {
+                const icon = DEFAULT_CATEGORY_ICONS[key] || '📁';
+                select.innerHTML += `<option value="${translatedName}">${icon} ${translatedName}</option>`;
+            }
+        });
+        
+        if (currentVal) select.value = currentVal;
+    }
 
-    defaultKeys.forEach(key => {
-        const translatedName = t(`defaultCategories.${key}`);
-        const icon = DEFAULT_CATEGORY_ICONS[key] || '📁';
-        if (!categories.some(c => c.name === translatedName)) {
-            filterSelect.innerHTML += `<option value="${translatedName}">${icon} ${translatedName}</option>`;
-        }
-    });
-
-    if (filterVal) filterSelect.value = filterVal;
+    // تعبئة select التصفية
+    if (filterSelect) {
+        filterSelect.innerHTML = `<option value="">${t('allCategories')}</option>`;
+        
+        categories.forEach(c => {
+            filterSelect.innerHTML += `<option value="${c.name}">${c.icon || '📁'} ${c.name}</option>`;
+        });
+        
+        defaultKeys.forEach(key => {
+            const translatedName = t(`defaultCategories.${key}`);
+            if (!categories.some(c => c.name === translatedName)) {
+                const icon = DEFAULT_CATEGORY_ICONS[key] || '📁';
+                filterSelect.innerHTML += `<option value="${translatedName}">${icon} ${translatedName}</option>`;
+            }
+        });
+        
+        if (filterVal) filterSelect.value = filterVal;
+    }
 }
 
 async function addCategory() {
@@ -675,13 +678,10 @@ function renderTransactions(list) {
     }
 
     tbody.innerHTML = list.map(tx => {
-        // الحصول على الأيقونة الصحيحة
         const icon = getIconForCategory(tx.category);
-
-        // الحصول على الاسم المعروض (مترجم إذا كان افتراضياً)
         let displayName = tx.category;
-
-        // قائمة الفئات الافتراضية
+        
+        // محاولة ترجمة اسم الفئة
         const defaultKeysMap = {
             'طعام': 'Food',
             'مواصلات': 'Transport',
@@ -693,9 +693,9 @@ function renderTransactions(list) {
             'صحة': 'Healthcare',
             'أخرى': 'Other'
         };
-
-        // البحث عن المفتاح الإنجليزي
+        
         let engKey = null;
+        // البحث عن المفتاح الإنجليزي المناسب
         for (const [ar, en] of Object.entries(defaultKeysMap)) {
             if (tx.category === ar || tx.category === en) {
                 engKey = en;
@@ -710,8 +710,6 @@ function renderTransactions(list) {
                 }
             }
         }
-
-        // إذا وجدنا المفتاح، نعرض الاسم المترجم
         if (engKey) {
             displayName = t(`defaultCategories.${engKey}`);
         }
@@ -1010,18 +1008,7 @@ async function updateUserLanguage(lang) {
 
 // ===== تغيير اللغة (مع إعادة تحميل الصفحة) =====
 function changeLanguage(lang) {
-    // حفظ اللغة في localStorage
     setLang(lang);
-    // تحديث اتجاه الصفحة
-    const html = document.documentElement;
-    if (lang === 'ar') {
-        html.setAttribute('dir', 'rtl');
-        html.setAttribute('lang', 'ar');
-    } else {
-        html.setAttribute('dir', 'ltr');
-        html.setAttribute('lang', lang);
-    }
-    // تحديث على الخادم (إذا كان المستخدم مسجلاً)
     if (token) {
         updateUserLanguage(lang);
     }
@@ -1077,7 +1064,14 @@ function applyLanguage(lang) {
         html.setAttribute('lang', lang);
     }
     applyTranslations();
-    // تحديث القائمة المنسدلة للغة (إذا كانت موجودة)
+    
+    // ===== تحديث القوائم المنسدلة للفئات =====
+    populateCategorySelects();
+    
+    // ===== إعادة عرض الجدول لتحديث أسماء الفئات =====
+    renderTransactions(transactions);
+    
+    // تحديث القائمة المنسدلة للغة
     const selector = document.getElementById('langSelector');
     if (selector) selector.value = lang;
 }
