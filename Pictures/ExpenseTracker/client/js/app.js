@@ -166,41 +166,54 @@ function renderCategories() {
 
 function populateCategorySelects() {
     const select = document.getElementById('category');
-    const currentVal = select.value;
-    select.innerHTML = `<option value="">${t('selectCategory')}</option>`;
-    
-    categories.forEach(c => {
-        select.innerHTML += `<option value="${c.name}">${c.icon || '📁'} ${c.name}</option>`;
-    });
-    
-    const defaultKeys = ['Food', 'Transport', 'Books', 'Supplies', 'Entertainment', 'Rent', 'Utilities', 'Healthcare', 'Other'];
-    defaultKeys.forEach(key => {
-        const translatedName = t(`defaultCategories.${key}`);
-        if (!categories.some(c => c.name === translatedName)) {
-            const icon = DEFAULT_CATEGORY_ICONS[key] || '📁';
-            select.innerHTML += `<option value="${translatedName}">${icon} ${translatedName}</option>`;
-        }
-    });
-    
-    if (currentVal) select.value = currentVal;
-
     const filterSelect = document.getElementById('filterCategory');
-    const filterVal = filterSelect.value;
-    filterSelect.innerHTML = `<option value="">${t('allCategories')}</option>`;
+    const defaultKeys = ['Food', 'Transport', 'Books', 'Supplies', 'Entertainment', 'Rent', 'Utilities', 'Healthcare', 'Other'];
     
-    categories.forEach(c => {
-        filterSelect.innerHTML += `<option value="${c.name}">${c.icon || '📁'} ${c.name}</option>`;
-    });
-    
-    defaultKeys.forEach(key => {
-        const translatedName = t(`defaultCategories.${key}`);
-        if (!categories.some(c => c.name === translatedName)) {
-            const icon = DEFAULT_CATEGORY_ICONS[key] || '📁';
-            filterSelect.innerHTML += `<option value="${translatedName}">${icon} ${translatedName}</option>`;
-        }
-    });
-    
-    if (filterVal) filterSelect.value = filterVal;
+    // ===== تعبئة select إضافة المعاملة =====
+    if (select) {
+        const currentVal = select.value;
+        select.innerHTML = `<option value="">${t('selectCategory')}</option>`;
+        
+        // الفئات المخصصة (من المستخدم)
+        categories.forEach(c => {
+            select.innerHTML += `<option value="${c.name}">${c.icon || '📁'} ${c.name}</option>`;
+        });
+        
+        // الفئات الافتراضية - القيمة = المفتاح الإنجليزي، النص = الاسم المترجم
+        defaultKeys.forEach(key => {
+            const translatedName = t(`defaultCategories.${key}`);
+            // نضيفها فقط إذا لم تكن موجودة في الفئات المخصصة
+            if (!categories.some(c => c.name === translatedName) && !categories.some(c => c.name === key)) {
+                const icon = DEFAULT_CATEGORY_ICONS[key] || '📁';
+                // المفتاح الإنجليزي هو القيمة، والاسم المترجم هو النص المعروض
+                select.innerHTML += `<option value="${key}">${icon} ${translatedName}</option>`;
+            }
+        });
+        
+        if (currentVal) select.value = currentVal;
+    }
+
+    // ===== تعبئة select التصفية =====
+    if (filterSelect) {
+        const filterVal = filterSelect.value;
+        filterSelect.innerHTML = `<option value="">${t('allCategories')}</option>`;
+        
+        // الفئات المخصصة (من المستخدم)
+        categories.forEach(c => {
+            filterSelect.innerHTML += `<option value="${c.name}">${c.icon || '📁'} ${c.name}</option>`;
+        });
+        
+        // الفئات الافتراضية - القيمة = المفتاح الإنجليزي، النص = الاسم المترجم
+        defaultKeys.forEach(key => {
+            const translatedName = t(`defaultCategories.${key}`);
+            if (!categories.some(c => c.name === translatedName) && !categories.some(c => c.name === key)) {
+                const icon = DEFAULT_CATEGORY_ICONS[key] || '📁';
+                filterSelect.innerHTML += `<option value="${key}">${icon} ${translatedName}</option>`;
+            }
+        });
+        
+        if (filterVal) filterSelect.value = filterVal;
+    }
 }
 
 async function addCategory() {
