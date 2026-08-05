@@ -1,3 +1,372 @@
+/* ===== متغيرات الألوان (Light Mode - افتراضي) ===== */
+:root {
+    /* الألوان الأساسية */
+    --bg-primary: #f0f2f5;
+    --bg-secondary: #ffffff;
+    --bg-card: #ffffff;
+    --bg-input: #f7fafc;
+    --bg-hover: #f7fafc;
+    --bg-table-header: #f7fafc;
+    --bg-modal: #ffffff;
+    --bg-progress: #edf2f7;
+    
+    /* النصوص */
+    --text-primary: #1a202c;
+    --text-secondary: #4a5568;
+    --text-muted: #718096;
+    --text-light: #a0aec0;
+    --text-inverse: #ffffff;
+    
+    /* الحدود */
+    --border-color: #e2e8f0;
+    --border-light: #f0f0f0;
+    
+    /* الظلال */
+    --shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+    --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.15);
+    
+    /* الألوان الأساسية للتطبيق */
+    --color-primary: #667eea;
+    --color-primary-dark: #5a67d8;
+    --color-success: #48bb78;
+    --color-danger: #fc8181;
+    --color-warning: #f6ad55;
+    --color-info: #63b3ed;
+    
+    /* ألوان البطاقات */
+    --card-income: #48bb78;
+    --card-expense: #fc8181;
+    --card-budget: #667eea;
+    --card-monthly: #ed8936;
+    --card-count: #9f7aea;
+}
+
+/* ===== متغيرات الألوان (Dark Mode) ===== */
+[data-theme="dark"] {
+    --bg-primary: #0d1117;
+    --bg-secondary: #161b22;
+    --bg-card: #1c2333;
+    --bg-input: #2d3748;
+    --bg-hover: #2d3748;
+    --bg-table-header: #2d3748;
+    --bg-modal: #1c2333;
+    --bg-progress: #2d3748;
+    
+    --text-primary: #f0f6fc;
+    --text-secondary: #c9d1d9;
+    --text-muted: #8b949e;
+    --text-light: #6e7681;
+    --text-inverse: #0d1117;
+    
+    --border-color: #30363d;
+    --border-light: #21262d;
+    
+    --shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.6);
+    
+    --color-primary: #7c8cf0;
+    --color-primary-dark: #5a67d8;
+    --color-success: #4ade80;
+    --color-danger: #f87171;
+    --color-warning: #fbbf24;
+    --color-info: #60a5fa;
+    
+    --card-income: #4ade80;
+    --card-expense: #f87171;
+    --card-budget: #7c8cf0;
+    --card-monthly: #fb923c;
+    --card-count: #a78bfa;
+}
+
+/* ===== تطبيق الألوان على العناصر ===== */
+body {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    transition: background 0.4s ease, color 0.3s ease;
+}
+
+#app {
+    background: var(--bg-secondary);
+    transition: background 0.4s ease;
+}
+
+.card {
+    background: var(--bg-card);
+    border-color: var(--border-light);
+    transition: background 0.3s ease, border-color 0.3s ease;
+}
+
+.card h3 {
+    color: var(--text-secondary);
+}
+
+.card p {
+    color: var(--text-primary);
+}
+
+/* ===== تحسين رؤية النصوص في Dark Mode ===== */
+[data-theme="dark"] .income { color: var(--card-income); }
+[data-theme="dark"] .expense { color: var(--card-expense); }
+[data-theme="dark"] .budget { color: var(--card-budget); }
+[data-theme="dark"] .monthly-budget { color: var(--card-monthly); }
+
+/* ===== بطاقات الإحصائيات ===== */
+#stats .card p {
+    font-weight: 700;
+}
+
+/* ===== النماذج والحقول ===== */
+#transactionForm input,
+#transactionForm select,
+.category-form input[type="text"],
+.filters input,
+.filters select,
+.login-container input {
+    background: var(--bg-input);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+    transition: background 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+}
+
+#transactionForm input:focus,
+#transactionForm select:focus,
+.filters input:focus,
+.filters select:focus,
+.login-container input:focus {
+    border-color: var(--color-primary);
+    background: var(--bg-card);
+}
+
+[data-theme="dark"] #transactionForm input::placeholder,
+[data-theme="dark"] .filters input::placeholder {
+    color: var(--text-muted);
+}
+
+/* ===== الجداول ===== */
+thead {
+    background: var(--bg-table-header);
+    transition: background 0.3s ease;
+}
+
+th {
+    color: var(--text-secondary);
+}
+
+td {
+    border-bottom-color: var(--border-color);
+    color: var(--text-primary);
+}
+
+tr:hover {
+    background: var(--bg-hover);
+}
+
+/* ===== الأزرار ===== */
+.btn-primary {
+    background: var(--color-primary);
+    color: #fff;
+}
+.btn-primary:hover {
+    background: var(--color-primary-dark);
+}
+
+[data-theme="dark"] .btn-secondary {
+    background: #2d3748;
+    color: var(--text-primary);
+}
+[data-theme="dark"] .btn-secondary:hover {
+    background: #3d4a5c;
+}
+
+/* ===== شريط تقدم الميزانية ===== */
+#budget-progress {
+    background: var(--bg-card);
+    border-color: var(--border-light);
+    transition: background 0.3s ease, border-color 0.3s ease;
+}
+
+.progress-bar-container {
+    background: var(--bg-progress);
+}
+
+.progress-label {
+    color: var(--text-primary);
+}
+
+.progress-details {
+    color: var(--text-muted);
+}
+
+/* ===== أهداف الادخار ===== */
+.goal-card {
+    background: var(--bg-card);
+    border-color: var(--border-light);
+    transition: background 0.3s ease, border-color 0.3s ease;
+}
+
+.goal-card .goal-name {
+    color: var(--text-primary);
+}
+
+.goal-card .goal-amount {
+    color: var(--text-muted);
+}
+
+.goal-card .goal-amount strong {
+    color: var(--text-primary);
+}
+
+/* ===== النوافذ المنبثقة ===== */
+.modal-content {
+    background: var(--bg-modal);
+    transition: background 0.3s ease;
+}
+
+.modal-content h3 {
+    color: var(--text-primary);
+}
+
+.modal-close {
+    color: var(--text-muted);
+}
+.modal-close:hover {
+    color: var(--text-primary);
+}
+
+/* ===== صفحة تسجيل الدخول ===== */
+.login-container {
+    background: var(--bg-card);
+    transition: background 0.3s ease;
+}
+
+.login-container h2 {
+    color: var(--text-primary);
+}
+
+.login-container p {
+    color: var(--text-muted);
+}
+
+/* ===== تحذير الميزانية ===== */
+.budget-alert.danger {
+    background: rgba(248, 113, 113, 0.15);
+    border-color: var(--color-danger);
+    color: var(--color-danger);
+}
+.budget-alert.warning {
+    background: rgba(251, 191, 36, 0.15);
+    border-color: var(--color-warning);
+    color: var(--color-warning);
+}
+
+[data-theme="dark"] .budget-alert.danger i,
+[data-theme="dark"] .budget-alert.warning i {
+    color: inherit;
+}
+
+/* ===== الروابط ===== */
+a {
+    color: var(--color-primary);
+}
+a:hover {
+    color: var(--color-primary-dark);
+}
+
+/* ===== الرسوم البيانية (تعديل الألوان في JS) ===== */
+/* سنتعامل مع ألوان الرسوم البيانية عبر JavaScript */
+
+/* ===== زر تبديل الوضع ===== */
+.theme-toggle {
+    background: transparent;
+    border: 2px solid var(--border-color);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 20px;
+    transition: all 0.3s ease;
+    color: var(--text-primary);
+}
+.theme-toggle:hover {
+    transform: rotate(30deg);
+    border-color: var(--color-primary);
+}
+.theme-toggle i {
+    transition: transform 0.5s ease;
+}
+.theme-toggle:hover i {
+    transform: rotate(180deg);
+}
+
+/* ===== الهيدر في Dark Mode ===== */
+[data-theme="dark"] header {
+    border-bottom-color: var(--border-color);
+}
+
+[data-theme="dark"] header h1 {
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] #userName {
+    color: var(--color-primary);
+}
+
+/* ===== تحسين التباين للعناصر الصغيرة ===== */
+[data-theme="dark"] .stat-card {
+    background: var(--bg-card);
+}
+
+[data-theme="dark"] .progress-status {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="dark"] .category-item {
+    background: var(--bg-input);
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] .category-item .cat-info {
+    color: var(--text-primary);
+}
+
+/* ===== تحسين رؤية الأيقونات ===== */
+[data-theme="dark"] .fas,
+[data-theme="dark"] .far,
+[data-theme="dark"] .fab {
+    color: var(--text-secondary);
+}
+
+[data-theme="dark"] .card h3 i {
+    color: var(--color-primary);
+}
+
+/* ===== شريط التمرير في Dark Mode ===== */
+[data-theme="dark"] ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+[data-theme="dark"] ::-webkit-scrollbar-track {
+    background: var(--bg-primary);
+}
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+    background: var(--text-muted);
+    border-radius: 4px;
+}
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+    background: var(--text-secondary);
+}
+
+/* ===== تأثير الانتقال العام ===== */
+* {
+    transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+}
+
+
 /* ===== إعدادات عامة ===== */
 * {
     margin: 0;
