@@ -1013,3 +1013,209 @@ html[lang="fr"] #transactions-list td {
         font-size: 10px;
     }
 }
+
+/* ===== أهداف الادخار ===== */
+#saving-goals {
+    background: #fff;
+    padding: 25px;
+    border-radius: 16px;
+    margin-bottom: 30px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    border: 1px solid #f0f0f0;
+}
+
+.goals-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.goals-header h2 {
+    color: #333;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.goals-header h2 i {
+    color: #667eea;
+}
+
+.goals-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 15px;
+}
+
+.goal-card {
+    background: #f7fafc;
+    padding: 18px;
+    border-radius: 12px;
+    border-left: 4px solid #667eea;
+    transition: all 0.3s ease;
+}
+.goal-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+.goal-card.completed {
+    opacity: 0.7;
+    border-left-color: #48bb78;
+}
+.goal-card .goal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+.goal-card .goal-header .goal-icon {
+    font-size: 28px;
+}
+.goal-card .goal-name {
+    font-weight: 600;
+    color: #333;
+    font-size: 16px;
+}
+.goal-card .goal-amount {
+    font-size: 14px;
+    color: #666;
+    margin: 5px 0;
+}
+.goal-card .goal-amount strong {
+    color: #333;
+}
+.goal-card .goal-progress {
+    margin-top: 10px;
+}
+.goal-card .goal-progress .progress-bar {
+    height: 8px;
+    border-radius: 4px;
+    background: #edf2f7;
+    overflow: hidden;
+}
+.goal-card .goal-progress .progress-bar .progress-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.6s ease;
+}
+.goal-card .goal-progress .progress-text {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: #999;
+    margin-top: 4px;
+}
+.goal-card .goal-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+}
+.goal-card .goal-actions .btn {
+    padding: 6px 12px;
+    font-size: 12px;
+}
+.goal-card .goal-actions .btn-add {
+    background: #48bb78;
+    color: #fff;
+}
+.goal-card .goal-actions .btn-add:hover {
+    background: #38a169;
+}
+.goal-card .goal-actions .btn-delete {
+    background: #fc8181;
+    color: #fff;
+}
+.goal-card .goal-actions .btn-delete:hover {
+    background: #f56565;
+}
+.goal-card .goal-actions .btn-edit {
+    background: #ed8936;
+    color: #fff;
+}
+.goal-card .goal-actions .btn-edit:hover {
+    background: #dd6b20;
+}
+
+/* ===== نافذة منبثقة (Modal) ===== */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    animation: fadeIn 0.3s ease;
+}
+
+.modal-content {
+    background: #fff;
+    padding: 30px;
+    border-radius: 16px;
+    max-width: 450px;
+    width: 90%;
+    position: relative;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.modal-close {
+    position: absolute;
+    top: 12px;
+    right: 18px;
+    font-size: 28px;
+    cursor: pointer;
+    color: #999;
+    transition: 0.3s;
+}
+.modal-close:hover {
+    color: #333;
+}
+
+.modal-content h3 {
+    margin-bottom: 20px;
+    color: #333;
+    font-size: 20px;
+}
+
+.modal-content form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+.modal-content input {
+    padding: 12px 14px;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 14px;
+}
+.modal-content input:focus {
+    outline: none;
+    border-color: #667eea;
+}
+.modal-content input[type="color"] {
+    padding: 4px;
+    height: 44px;
+    cursor: pointer;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+@media (max-width: 480px) {
+    .goals-grid {
+        grid-template-columns: 1fr;
+    }
+    .modal-content {
+        padding: 20px;
+        width: 95%;
+    }
+}
