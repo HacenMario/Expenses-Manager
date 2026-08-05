@@ -28,71 +28,15 @@ const DEFAULT_CATEGORY_ICONS = {
     'Other': '📁'
 };
 
-// ===== إدارة وضع Dark Mode =====
-const THEME_KEY = 'theme';
-let currentTheme = localStorage.getItem(THEME_KEY) || 'light';
-
-// ===== تطبيق الوضع =====
-function applyTheme(theme) {
-    currentTheme = theme;
-    localStorage.setItem(THEME_KEY, theme);
-    
-    if (theme === 'dark') {
-        document.documentElement.setAttribute('data-theme', 'dark');
-        const toggleIcon = document.querySelector('#themeToggle i');
-        if (toggleIcon) toggleIcon.className = 'fas fa-sun';
-    } else {
-        document.documentElement.removeAttribute('data-theme');
-        const toggleIcon = document.querySelector('#themeToggle i');
-        if (toggleIcon) toggleIcon.className = 'fas fa-moon';
-    }
-}
-
-// ===== تبديل الوضع =====
-function toggleTheme() {
-    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
-    applyTheme(newTheme);
-    updateChartsColors();
-}
-
-// ===== تحديث ألوان الرسوم البيانية =====
-function updateChartsColors() {
-    if (chartPie) {
-        const isDark = currentTheme === 'dark';
-        const textColor = isDark ? '#f0f6fc' : '#1a202c';
-        chartPie.options.plugins.legend.labels.color = textColor;
-        chartPie.update();
-    }
-    if (chartTrend) {
-        const isDark = currentTheme === 'dark';
-        const textColor = isDark ? '#f0f6fc' : '#1a202c';
-        const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
-        chartTrend.options.plugins.legend.labels.color = textColor;
-        chartTrend.options.scales.x.ticks.color = textColor;
-        chartTrend.options.scales.y.ticks.color = textColor;
-        chartTrend.options.scales.x.grid.color = gridColor;
-        chartTrend.options.scales.y.grid.color = gridColor;
-        chartTrend.update();
-    }
-}
-
-// ===== تهيئة الوضع عند تحميل الصفحة =====
-function initTheme() {
-    const savedTheme = localStorage.getItem(THEME_KEY) || 'light';
-    applyTheme(savedTheme);
-}
-
 // ===== الحصول على أيقونة الفئة =====
-// ===== الحصول على أيقونة الفئة بشكل صحيح =====
 function getIconForCategory(categoryName) {
-    // 1. البحث في الفئات المخصصة (المخزنة في قاعدة البيانات)
+    // 1. البحث في الفئات المخصصة
     const customCat = categories.find(c => c.name === categoryName);
     if (customCat && customCat.icon) {
         return customCat.icon;
     }
-
-    // 2. البحث في الفئات الافتراضية باستخدام المفاتيح الإنجليزية
-    // هذه هي الأسماء المخزنة في قاعدة البيانات للفئات الافتراضية
+    
+    // 2. البحث في الفئات الافتراضية
     const defaultKeysMap = {
         'طعام': 'Food',
         'مواصلات': 'Transport',
@@ -104,32 +48,27 @@ function getIconForCategory(categoryName) {
         'صحة': 'Healthcare',
         'أخرى': 'Other'
     };
-
-    // 3. نبحث عن المفتاح الإنجليزي المقابل للاسم المخزن
-    let engKey = null;
+    
+    if (DEFAULT_CATEGORY_ICONS[categoryName]) {
+        return DEFAULT_CATEGORY_ICONS[categoryName];
+    }
+    
     for (const [ar, en] of Object.entries(defaultKeysMap)) {
         if (categoryName === ar || categoryName === en) {
-            engKey = en;
-            break;
-        }
-    }
-
-    // 4. إذا لم نجد، نبحث في الترجمة الحالية للفئات الافتراضية
-    if (!engKey) {
-        for (const [en, translated] of Object.entries(t('defaultCategories'))) {
-            if (categoryName === translated) {
-                engKey = en;
-                break;
+            if (DEFAULT_CATEGORY_ICONS[en]) {
+                return DEFAULT_CATEGORY_ICONS[en];
             }
         }
     }
-
-    // 5. إذا وجدنا المفتاح، نعيد الأيقونة المناسبة
-    if (engKey && DEFAULT_CATEGORY_ICONS[engKey]) {
-        return DEFAULT_CATEGORY_ICONS[engKey];
+    
+    for (const [en, translated] of Object.entries(t('defaultCategories'))) {
+        if (categoryName === translated) {
+            if (DEFAULT_CATEGORY_ICONS[en]) {
+                return DEFAULT_CATEGORY_ICONS[en];
+            }
+        }
     }
-
-    // 6. أيقونة افتراضية إذا لم نجد تطابقاً
+    
     return '📁';
 }
 
@@ -204,13 +143,14 @@ async function loadCategories() {
         if (data.success) {
             categories = data.data;
             renderCategories();
-            populateCategorySelects(); // تأكد من استدعائها هنا
+            populateCategorySelects();
         }
     } catch (err) { console.error('خطأ في تحميل الفئات', err); }
 }
 
 function renderCategories() {
     const container = document.getElementById('categoriesList');
+    if (!container) return;
     if (categories.length === 0) {
         container.innerHTML = `<p style="grid-column:1/-1;text-align:center;color:#999;">${t('noCategories')}</p>`;
         return;
@@ -233,46 +173,34 @@ function renderCategories() {
 }
 
 function populateCategorySelects() {
-    // تعريف defaultKeys داخل الدالة
-    const defaultKeys = ['Food', 'Transport', 'Books', 'Supplies', 'Entertainment', 'Rent', 'Utilities', 'Healthcare', 'Other'];
-    
     const select = document.getElementById('category');
     const filterSelect = document.getElementById('filterCategory');
     
-    // حفظ القيم الحالية
     const currentVal = select ? select.value : '';
     const filterVal = filterSelect ? filterSelect.value : '';
 
-    // تعبئة select إضافة المعاملة
+    const defaultKeys = ['Food', 'Transport', 'Books', 'Supplies', 'Entertainment', 'Rent', 'Utilities', 'Healthcare', 'Other'];
+
     if (select) {
         select.innerHTML = `<option value="">${t('selectCategory')}</option>`;
-        
-        // الفئات المخصصة (من قاعدة البيانات)
         categories.forEach(c => {
             select.innerHTML += `<option value="${c.name}">${c.icon || '📁'} ${c.name}</option>`;
         });
-        
-        // الفئات الافتراضية (مترجمة)
         defaultKeys.forEach(key => {
             const translatedName = t(`defaultCategories.${key}`);
-            // نضيفها فقط إذا لم تكن موجودة في الفئات المخصصة
             if (!categories.some(c => c.name === translatedName)) {
                 const icon = DEFAULT_CATEGORY_ICONS[key] || '📁';
                 select.innerHTML += `<option value="${translatedName}">${icon} ${translatedName}</option>`;
             }
         });
-        
         if (currentVal) select.value = currentVal;
     }
 
-    // تعبئة select التصفية
     if (filterSelect) {
         filterSelect.innerHTML = `<option value="">${t('allCategories')}</option>`;
-        
         categories.forEach(c => {
             filterSelect.innerHTML += `<option value="${c.name}">${c.icon || '📁'} ${c.name}</option>`;
         });
-        
         defaultKeys.forEach(key => {
             const translatedName = t(`defaultCategories.${key}`);
             if (!categories.some(c => c.name === translatedName)) {
@@ -280,7 +208,6 @@ function populateCategorySelects() {
                 filterSelect.innerHTML += `<option value="${translatedName}">${icon} ${translatedName}</option>`;
             }
         });
-        
         if (filterVal) filterSelect.value = filterVal;
     }
 }
@@ -543,12 +470,8 @@ async function loadSummary() {
             document.getElementById('monthlyBudgetDisplay').textContent = summary.monthlyBudget.toFixed(0) + ' ' + CURRENCY;
             document.getElementById('transactionCount').textContent = summary.transactionCount;
 
-            // تحديث شريط تقدم الميزانية
             updateBudgetProgress(summary);
-
-            // تحديث التحذير
             checkBudgetAlert(summary);
-            // تحديث الرسوم البيانية
             updateCharts(summary.categoryTotals, transactions);
         } else {
             console.error('Error in summary:', data.message);
@@ -683,7 +606,6 @@ function renderTransactions(list) {
         const icon = getIconForCategory(tx.category);
         let displayName = tx.category;
         
-        // محاولة ترجمة اسم الفئة
         const defaultKeysMap = {
             'طعام': 'Food',
             'مواصلات': 'Transport',
@@ -697,7 +619,6 @@ function renderTransactions(list) {
         };
         
         let engKey = null;
-        // البحث عن المفتاح الإنجليزي المناسب
         for (const [ar, en] of Object.entries(defaultKeysMap)) {
             if (tx.category === ar || tx.category === en) {
                 engKey = en;
@@ -743,14 +664,8 @@ function formatDate(dateStr) {
     return `${year}/${month}/${day} ${hours}:${mins}`;
 }
 
-// ===== دالة updateCharts الكاملة =====
+// ===== الرسوم البيانية =====
 function updateCharts(categoryTotals, allTransactions) {
-    const isDark = currentTheme === 'dark';
-    const textColor = isDark ? '#f0f6fc' : '#1a202c';
-    const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
-    const borderColor = isDark ? '#30363d' : '#e2e8f0';
-
-    // الرسم البياني الدائري
     const ctxPie = document.getElementById('expenseChart').getContext('2d');
     if (chartPie) chartPie.destroy();
 
@@ -758,13 +673,8 @@ function updateCharts(categoryTotals, allTransactions) {
     const catValues = Object.values(categoryTotals);
 
     if (catNames.length > 0) {
-        // ترجمة أسماء الفئات للرسم البياني مع الحفاظ على الأيقونات
         const translatedLabels = catNames.map(name => {
-            // الحصول على الأيقونة المناسبة
-            const icon = getIconForCategory(name);
-
-            // محاولة ترجمة اسم الفئة
-            const defaultKeysMap = {
+            const defaultKeys = {
                 'طعام': 'Food',
                 'مواصلات': 'Transport',
                 'كتب': 'Books',
@@ -775,9 +685,8 @@ function updateCharts(categoryTotals, allTransactions) {
                 'صحة': 'Healthcare',
                 'أخرى': 'Other'
             };
-
             let engKey = null;
-            for (const [ar, en] of Object.entries(defaultKeysMap)) {
+            for (const [ar, en] of Object.entries(defaultKeys)) {
                 if (name === ar || name === en) {
                     engKey = en;
                     break;
@@ -791,14 +700,10 @@ function updateCharts(categoryTotals, allTransactions) {
                     }
                 }
             }
-
+            const icon = getIconForCategory(name);
             const displayName = engKey ? t(`defaultCategories.${engKey}`) : name;
             return `${icon} ${displayName}`;
         });
-
-        const lightColors = ['#667eea', '#48bb78', '#fc8181', '#f6ad55', '#68d391', '#9f7aea', '#f687b3', '#4fd1c5', '#ed8936'];
-        const darkColors = ['#7c8cf0', '#4ade80', '#f87171', '#fbbf24', '#60a5fa', '#a78bfa', '#f472b6', '#34d399', '#fb923c'];
-        const colors = isDark ? darkColors : lightColors;
 
         chartPie = new Chart(ctxPie, {
             type: 'doughnut',
@@ -806,9 +711,8 @@ function updateCharts(categoryTotals, allTransactions) {
                 labels: translatedLabels,
                 datasets: [{
                     data: catValues,
-                    backgroundColor: colors.slice(0, catNames.length),
-                    borderWidth: 2,
-                    borderColor: isDark ? '#1c2333' : '#ffffff'
+                    backgroundColor: ['#667eea','#48bb78','#fc8181','#f6ad55','#68d391','#9f7aea','#f687b3','#4fd1c5','#ed8936'],
+                    borderWidth: 2
                 }]
             },
             options: {
@@ -817,7 +721,6 @@ function updateCharts(categoryTotals, allTransactions) {
                     legend: {
                         position: 'bottom',
                         labels: {
-                            color: textColor,
                             font: { size: 13 },
                             padding: 15,
                             usePointStyle: true,
@@ -829,7 +732,6 @@ function updateCharts(categoryTotals, allTransactions) {
         });
     }
 
-    // الرسم البياني الخطي
     const ctxTrend = document.getElementById('trendChart').getContext('2d');
     if (chartTrend) chartTrend.destroy();
 
@@ -860,40 +762,20 @@ function updateCharts(categoryTotals, allTransactions) {
             datasets: [{
                 label: t('dailyExpenses') || 'المصروفات اليومية',
                 data: dailyTotals,
-                borderColor: isDark ? '#f87171' : '#fc8181',
-                backgroundColor: isDark ? 'rgba(248, 113, 113, 0.15)' : 'rgba(252, 129, 129, 0.1)',
+                borderColor: '#fc8181',
+                backgroundColor: 'rgba(252, 129, 129, 0.1)',
                 tension: 0.3,
                 fill: true,
-                pointBackgroundColor: isDark ? '#f87171' : '#fc8181',
-                pointBorderColor: isDark ? '#f87171' : '#fc8181',
-                pointRadius: 4,
-                borderWidth: 2.5
+                pointBackgroundColor: '#fc8181'
             }]
         },
         options: {
             responsive: true,
             plugins: {
-                legend: {
-                    display: true,
-                    position: 'top',
-                    labels: {
-                        color: textColor,
-                        font: { size: 13 },
-                        boxWidth: 20,
-                        padding: 15
-                    }
-                }
+                legend: { display: true, position: 'top' }
             },
             scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: { color: textColor, font: { size: 12 } },
-                    grid: { color: gridColor, drawBorder: false }
-                },
-                x: {
-                    ticks: { color: textColor, font: { size: 12 } },
-                    grid: { color: gridColor, drawBorder: false }
-                }
+                y: { beginAtZero: true }
             }
         }
     });
@@ -902,7 +784,6 @@ function updateCharts(categoryTotals, allTransactions) {
 // ===== تحديث شريط تقدم الميزانية =====
 function updateBudgetProgress(summaryData) {
     const { totalExpenses, monthlyBudget } = summaryData;
-    const isDark = currentTheme === 'dark';
 
     const spentElement = document.getElementById('spentAmount');
     const budgetElement = document.getElementById('budgetAmount');
@@ -928,10 +809,10 @@ function updateBudgetProgress(summaryData) {
         
         let barColor = '#48bb78';
         if (percentage >= 90) {
-            barColor = isDark ? '#f87171' : '#fc8181';
+            barColor = '#fc8181';
             progressBar.classList.add('high');
         } else if (percentage >= 70) {
-            barColor = isDark ? '#fbbf24' : '#f6ad55';
+            barColor = '#f6ad55';
             progressBar.classList.add('medium');
         } else {
             progressBar.classList.add('low');
@@ -974,7 +855,7 @@ async function loadSettings() {
             if (settings.language && settings.language !== currentLang) {
                 setLang(settings.language);
                 document.getElementById('langSelector').value = settings.language;
-                changeLanguage(settings.language);
+                applyLanguage(settings.language);
             }
         } else {
             console.error('Error loading settings:', data.message);
@@ -1008,13 +889,30 @@ async function updateUserLanguage(lang) {
     }
 }
 
-// ===== تغيير اللغة (مع إعادة تحميل الصفحة) =====
+// ===== تطبيق اللغة (بدون إعادة تحميل) =====
+function applyLanguage(lang) {
+    setLang(lang);
+    const html = document.documentElement;
+    if (lang === 'ar') {
+        html.setAttribute('dir', 'rtl');
+        html.setAttribute('lang', 'ar');
+    } else {
+        html.setAttribute('dir', 'ltr');
+        html.setAttribute('lang', lang);
+    }
+    applyTranslations();
+    populateCategorySelects();
+    renderTransactions(transactions);
+    const selector = document.getElementById('langSelector');
+    if (selector) selector.value = lang;
+}
+
+// ===== تغيير اللغة (مع إعادة تحميل) =====
 function changeLanguage(lang) {
     setLang(lang);
     if (token) {
         updateUserLanguage(lang);
     }
-    // إعادة تحميل الصفحة لتطبيق جميع التغييرات
     window.location.reload();
 }
 
@@ -1054,40 +952,22 @@ function filterTransactions() {
     renderTransactions(filtered);
 }
 
-// ===== تطبيق اللغة (بدون إعادة تحميل) =====
-function applyLanguage(lang) {
-    setLang(lang);
-    const html = document.documentElement;
-    if (lang === 'ar') {
-        html.setAttribute('dir', 'rtl');
-        html.setAttribute('lang', 'ar');
-    } else {
-        html.setAttribute('dir', 'ltr');
-        html.setAttribute('lang', lang);
-    }
-    applyTranslations();
-    
-    // تحديث القوائم المنسدلة للفئات
-    populateCategorySelects();  // هذه الدالة تحتاج إلى defaultKeys معرف داخلها
-    
-    // إعادة عرض الجدول
-    renderTransactions(transactions);
-    
-    // تحديث القائمة المنسدلة للغة
-    const selector = document.getElementById('langSelector');
-    if (selector) selector.value = lang;
+// ===== التحقق من وجود توكن في URL (Google Auth) =====
+const urlParams = new URLSearchParams(window.location.search);
+const googleToken = urlParams.get('token');
+if (googleToken) {
+    token = googleToken;
+    localStorage.setItem('token', token);
+    window.history.replaceState({}, document.title, '/');
+    location.reload();
 }
 
-// ===== دالة init الكاملة =====
+// ===== تهيئة التطبيق =====
 async function init() {
-    // 1. تهيئة الوضع (Dark/Light)
-    initTheme();
-
-    // 2. تهيئة اللغة (دون إعادة تحميل)
     const savedLang = localStorage.getItem('lang') || 'ar';
-    applyLanguage(savedLang);  // استخدم applyLanguage بدلاً من changeLanguage
+    document.getElementById('langSelector').value = savedLang;
+    applyLanguage(savedLang);
 
-    // 3. التحقق من وجود توكن (تسجيل الدخول)
     if (token) {
         document.getElementById('app').style.display = 'block';
         document.getElementById('loginPage').style.display = 'none';
@@ -1103,7 +983,6 @@ async function init() {
         await loadSettings();
         await loadGoals();
 
-        updateChartsColors();
         applyTranslations();
 
     } else {
@@ -1117,7 +996,7 @@ async function init() {
     console.log('✅ التطبيق جاهز');
 }
 
-// ===== ربط الأحداث (مع التحقق من وجود العناصر) =====
+// ===== ربط الأحداث =====
 const loginForm = document.getElementById('loginForm');
 if (loginForm) loginForm.addEventListener('submit', (e) => { e.preventDefault(); login(); });
 
@@ -1160,9 +1039,7 @@ if (addCategoryBtn) addCategoryBtn.addEventListener('click', addCategory);
 const langSelector = document.getElementById('langSelector');
 if (langSelector) {
     langSelector.addEventListener('change', (e) => {
-        const newLang = e.target.value;
-        // نستدعي changeLanguage (التي تعيد تحميل الصفحة) فقط عند تغيير المستخدم
-        changeLanguage(newLang);
+        changeLanguage(e.target.value);
     });
 }
 
@@ -1178,10 +1055,6 @@ if (closeGoalModalBtn) closeGoalModalBtn.addEventListener('click', closeGoalModa
 const goalForm = document.getElementById('goalForm');
 if (goalForm) goalForm.addEventListener('submit', createGoal);
 
-const themeToggle = document.getElementById('themeToggle');
-if (themeToggle) themeToggle.addEventListener('click', toggleTheme);
-
-// إغلاق النافذة المنبثقة عند النقر خارجها
 window.addEventListener('click', (e) => {
     const modal = document.getElementById('goalModal');
     if (modal && e.target === modal) closeGoalModal();
