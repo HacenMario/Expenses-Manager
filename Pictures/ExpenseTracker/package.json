@@ -1,7 +1,7 @@
 {
-  "name": "expense-tracker",
+  "name": "expenses manager",
   "version": "1.0.0",
-  "description": "Student Expense Tracker",
+  "description": "Expense Manager with AI Analytics",
   "main": "server/server.js",
   "scripts": {
     "start": "node server/server.js",
@@ -15,7 +15,10 @@
     "bcryptjs": "^2.4.3",
     "jsonwebtoken": "^9.0.0",
     "axios": "^1.4.0",
-    "nodemailer": "^6.9.3"
+    "nodemailer": "^6.9.3",
+    "simple-statistics": "^7.8.3",
+    "ml-regression": "^2.0.3",
+    "ml-kmeans": "^6.0.1"
   },
   "devDependencies": {
     "nodemon": "^2.0.20"
