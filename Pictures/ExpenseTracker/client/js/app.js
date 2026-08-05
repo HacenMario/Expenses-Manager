@@ -831,7 +831,15 @@ async function init() {
         document.getElementById('app').style.display = 'block';
         document.getElementById('loginPage').style.display = 'none';
         const user = JSON.parse(localStorage.getItem('user') || '{}');
-        document.getElementById('userName').innerHTML = `<i class="fas fa-user-circle"></i> ${t('welcome')} ${user.name || ''}`;
+        
+        // تعيين اسم المستخدم مع الترجمة
+        const userNameElement = document.getElementById('userName');
+        const welcomeTranslated = t('welcome');
+        userNameElement.innerHTML = `<i class="fas fa-user-circle"></i> ${welcomeTranslated} ${user.name || ''}`;
+        
+        // إعادة تطبيق الترجمات على العناصر الأخرى
+        applyTranslations();
+        
         await loadCategories();
         await loadTransactions();
         await loadSummary();
