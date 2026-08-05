@@ -5,6 +5,7 @@ const User = require('../models/User');
 const { protect } = require('../middleware/auth');
 const axios = require('axios');
 const { sendBudgetAlertEmail, testEmailConnection } = require('../services/emailService');
+const SavingGoal = require('../models/SavingGoal');
 
 // ===== متغيرات التخزين المؤقت لأسعار الصرف =====
 let exchangeRatesCache = {};
@@ -256,37 +257,37 @@ router.get('/dashboard', protect, async (req, res) => {
     try {
         const user = await User.findById(req.user.id);
         const transactions = await Transaction.find({ user: req.user.id });
-        
         const now = new Date();
+
+        // --- دوال مساعدة لحساب التواريخ بأمان ---
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
         const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
         const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
-        
-        // 1. مصروفات الشهر الحالي
+
+        // --- 1. حساب مصروفات ودخل الشهر الحالي ---
         const thisMonthExpenses = transactions
             .filter(t => t.type === 'expense' && new Date(t.date) >= startOfMonth)
-            .reduce((sum, t) => sum + t.amount, 0);
-        
-        // 2. مصروفات الشهر الماضي
-        const lastMonthExpenses = transactions
-            .filter(t => t.type === 'expense' && new Date(t.date) >= startOfLastMonth && new Date(t.date) <= endOfLastMonth)
-            .reduce((sum, t) => sum + t.amount, 0);
-        
-        // 3. دخل الشهر الحالي
+            .reduce((sum, t) => sum + t.amount, 0) || 0;
+
         const thisMonthIncome = transactions
             .filter(t => t.type === 'income' && new Date(t.date) >= startOfMonth)
-            .reduce((sum, t) => sum + t.amount, 0);
-        
-        // 4. أعلى فئة إنفاق
+            .reduce((sum, t) => sum + t.amount, 0) || 0;
+
+        // --- 2. حساب مصروفات الشهر الماضي ---
+        const lastMonthExpenses = transactions
+            .filter(t => t.type === 'expense' && new Date(t.date) >= startOfLastMonth && new Date(t.date) <= endOfLastMonth)
+            .reduce((sum, t) => sum + t.amount, 0) || 0;
+
+        // --- 3. أعلى فئة إنفاق ---
         const categoryTotals = {};
         transactions
             .filter(t => t.type === 'expense' && new Date(t.date) >= startOfMonth)
             .forEach(t => {
                 categoryTotals[t.category] = (categoryTotals[t.category] || 0) + t.amount;
             });
-        
+
         let topCategory = { name: 'لا توجد', amount: 0, percentage: 0 };
-        const totalExpenses = Object.values(categoryTotals).reduce((a, b) => a + b, 0);
+        const totalExpenses = Object.values(categoryTotals).reduce((a, b) => a + b, 0) || 0;
         for (const [name, amount] of Object.entries(categoryTotals)) {
             if (amount > topCategory.amount) {
                 topCategory = { 
@@ -296,34 +297,43 @@ router.get('/dashboard', protect, async (req, res) => {
                 };
             }
         }
-        
-        // 5. متوسط الإنفاق اليومي
+
+        // --- 4. متوسط الإنفاق اليومي ---
         const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
         const dailyAverage = daysInMonth > 0 ? thisMonthExpenses / daysInMonth : 0;
-        
-        // 6. نسبة الادخار
+
+        // --- 5. نسبة الادخار ---
         const savingsRate = thisMonthIncome > 0 ? ((thisMonthIncome - thisMonthExpenses) / thisMonthIncome) * 100 : 0;
-        
-        // 7. مقارنة مع الشهر الماضي
+
+        // --- 6. المقارنة مع الشهر الماضي ---
         const comparison = lastMonthExpenses > 0 
             ? ((thisMonthExpenses - lastMonthExpenses) / lastMonthExpenses) * 100 
             : 0;
-        
-        // 8. أسرع هدف ادخار
-        const goals = await SavingGoal.find({ user: req.user.id, isCompleted: false });
+
+        // --- 7. أسرع هدف ادخار (مع التحقق من وجود النموذج) ---
         let fastestGoal = null;
         let bestProgress = 0;
-        for (const goal of goals) {
-            const progress = goal.targetAmount > 0 ? (goal.currentAmount / goal.targetAmount) * 100 : 0;
-            if (progress > bestProgress) {
-                bestProgress = progress;
-                fastestGoal = goal;
+        try {
+            // تأكد من أن نموذج SavingGoal موجود ومستورد
+            if (typeof SavingGoal !== 'undefined' && SavingGoal) {
+                const goals = await SavingGoal.find({ user: req.user.id, isCompleted: false });
+                for (const goal of goals) {
+                    const progress = goal.targetAmount > 0 ? (goal.currentAmount / goal.targetAmount) * 100 : 0;
+                    if (progress > bestProgress) {
+                        bestProgress = progress;
+                        fastestGoal = goal;
+                    }
+                }
             }
+        } catch (goalError) {
+            console.warn('⚠️ Could not fetch saving goals:', goalError.message);
+            // نواصل التنفيذ دون أهداف إذا حدث خطأ
         }
-        
-        // 9. عدد الأيام المتبقية في الشهر
+
+        // --- 8. عدد الأيام المتبقية ---
         const daysLeft = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate() - now.getDate();
-        
+
+        // --- 9. إرسال الرد ---
         res.status(200).json({
             success: true,
             data: {
@@ -344,8 +354,15 @@ router.get('/dashboard', protect, async (req, res) => {
                 transactionCount: transactions.length
             }
         });
+
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        console.error('❌ Dashboard Error:', error.message);
+        console.error('Stack:', error.stack); // سجل التفاصيل كاملة لمساعدتنا في التشخيص
+        res.status(500).json({ 
+            success: false, 
+            message: 'فشل في تحميل بيانات لوحة التحكم',
+            error: error.message 
+        });
     }
 });
 
