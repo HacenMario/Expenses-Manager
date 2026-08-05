@@ -2,6 +2,68 @@ const API = window.location.hostname === 'localhost'
     ? 'http://localhost:5000/api' 
     : 'https://expenses-manager-z2up.onrender.com/api';
 
+// ===== إدارة وضع Dark Mode =====
+const THEME_KEY = 'theme';
+let currentTheme = localStorage.getItem(THEME_KEY) || 'light';
+
+// ===== تطبيق الوضع =====
+function applyTheme(theme) {
+    currentTheme = theme;
+    localStorage.setItem(THEME_KEY, theme);
+    
+    if (theme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        document.querySelector('#themeToggle i').className = 'fas fa-sun';
+    } else {
+        document.documentElement.removeAttribute('data-theme');
+        document.querySelector('#themeToggle i').className = 'fas fa-moon';
+    }
+}
+
+// ===== تبديل الوضع =====
+function toggleTheme() {
+    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+    applyTheme(newTheme);
+    
+    // تحديث ألوان الرسوم البيانية
+    updateChartsColors();
+}
+
+// ===== تحديث ألوان الرسوم البيانية حسب الوضع =====
+function updateChartsColors() {
+    // إعادة إنشاء الرسوم البيانية مع الألوان الجديدة
+    if (chartPie) {
+        const isDark = currentTheme === 'dark';
+        const textColor = isDark ? '#f0f6fc' : '#1a202c';
+        const gridColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
+        
+        chartPie.options.plugins.legend.labels.color = textColor;
+        chartPie.update();
+    }
+    if (chartTrend) {
+        const isDark = currentTheme === 'dark';
+        const textColor = isDark ? '#f0f6fc' : '#1a202c';
+        const gridColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
+        
+        chartTrend.options.plugins.legend.labels.color = textColor;
+        chartTrend.options.scales.x.ticks.color = textColor;
+        chartTrend.options.scales.y.ticks.color = textColor;
+        chartTrend.options.scales.x.grid.color = gridColor;
+        chartTrend.options.scales.y.grid.color = gridColor;
+        chartTrend.update();
+    }
+}
+
+// ===== تهيئة الوضع عند تحميل الصفحة =====
+function initTheme() {
+    const savedTheme = localStorage.getItem(THEME_KEY) || 'light';
+    applyTheme(savedTheme);
+}
+
+// ===== ربط زر التبديل =====
+document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+
+
 let token = localStorage.getItem('token');
 let transactions = [];
 let categories = [];
@@ -344,22 +406,23 @@ async function loadSummary() {
 // ===== تحديث شريط تقدم الميزانية =====
 function updateBudgetProgress(summaryData) {
     const { totalExpenses, monthlyBudget } = summaryData;
+    const isDark = currentTheme === 'dark';
 
-    // تحديث الأرقام
+    // ===== تحديث الأرقام =====
     document.getElementById('spentAmount').textContent = totalExpenses.toFixed(0) + ' ' + CURRENCY;
     document.getElementById('budgetAmount').textContent = monthlyBudget.toFixed(0) + ' ' + CURRENCY;
 
-    // حساب النسبة المئوية
+    // ===== حساب النسبة المئوية =====
     let percentage = 0;
     if (monthlyBudget > 0) {
         percentage = Math.min((totalExpenses / monthlyBudget) * 100, 100);
     }
     percentage = Math.round(percentage);
 
-    // تحديث النسبة المعروضة
+    // ===== تحديث النسبة المعروضة =====
     document.getElementById('budgetPercentage').textContent = percentage + '%';
 
-    // تحديث شريط التقدم
+    // ===== تحديث شريط التقدم =====
     const progressBar = document.getElementById('budgetProgressBar');
     const progressText = document.getElementById('progressBarText');
     const statusDiv = document.getElementById('progressStatus');
@@ -367,22 +430,36 @@ function updateBudgetProgress(summaryData) {
     progressBar.style.width = percentage + '%';
     progressText.textContent = percentage + '%';
 
-    // تحديث اللون والحالة حسب النسبة
+    // ===== تحديد اللون حسب النسبة والوضع =====
+    let barColor;
+    let statusClass;
+    let statusIcon;
+    let statusMessage;
+
+    if (percentage < 70) {
+        barColor = isDark ? '#4ade80' : '#48bb78';
+        statusClass = 'progress-status';
+        statusIcon = 'fa-check-circle';
+        statusMessage = t('budgetStatusSafe') || 'ضمن الميزانية';
+    } else if (percentage < 90) {
+        barColor = isDark ? '#fbbf24' : '#f6ad55';
+        statusClass = 'progress-status warning';
+        statusIcon = 'fa-exclamation-triangle';
+        statusMessage = t('budgetStatusWarning') || 'اقتربت من الحد الأقصى';
+    } else {
+        barColor = isDark ? '#f87171' : '#fc8181';
+        statusClass = 'progress-status danger';
+        statusIcon = 'fa-times-circle';
+        statusMessage = t('budgetStatusDanger') || 'تجاوزت الميزانية!';
+    }
+
+    // ===== تطبيق اللون على الشريط =====
+    progressBar.style.background = `linear-gradient(90deg, ${barColor}, ${barColor}dd)`;
     progressBar.classList.remove('low', 'medium', 'high');
     
-    if (percentage < 70) {
-        progressBar.classList.add('low');
-        statusDiv.className = 'progress-status';
-        statusDiv.innerHTML = `<i class="fas fa-check-circle"></i> <span>${t('budgetStatusSafe') || 'ضمن الميزانية'}</span>`;
-    } else if (percentage < 100) {
-        progressBar.classList.add('medium');
-        statusDiv.className = 'progress-status warning';
-        statusDiv.innerHTML = `<i class="fas fa-exclamation-triangle"></i> <span>${t('budgetStatusWarning') || 'اقتربت من الحد الأقصى'}</span>`;
-    } else {
-        progressBar.classList.add('high');
-        statusDiv.className = 'progress-status danger';
-        statusDiv.innerHTML = `<i class="fas fa-times-circle"></i> <span>${t('budgetStatusDanger') || 'تجاوزت الميزانية!'}</span>`;
-    }
+    // ===== تحديث الحالة =====
+    statusDiv.className = statusClass;
+    statusDiv.innerHTML = `<i class="fas ${statusIcon}"></i> <span>${statusMessage}</span>`;
 }
 
 // ===== التحقق من الميزانية (مع تحديث واجهة التحذير) =====
@@ -587,7 +664,13 @@ function formatDate(dateStr) {
 
 // ===== الرسوم البيانية =====
 function updateCharts(categoryTotals, allTransactions) {
-    // ===== الرسم البياني الدائري (مع الأيقونات) =====
+    // ===== تحديد ألوان الوضع الحالي (Light/Dark) =====
+    const isDark = currentTheme === 'dark';
+    const textColor = isDark ? '#f0f6fc' : '#1a202c';
+    const gridColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
+    const borderColor = isDark ? '#2d3748' : '#ffffff';
+
+    // ===== 1. الرسم البياني الدائري (Doughnut Chart) =====
     const ctxPie = document.getElementById('expenseChart').getContext('2d');
     if (chartPie) chartPie.destroy();
 
@@ -595,14 +678,8 @@ function updateCharts(categoryTotals, allTransactions) {
     const catValues = Object.values(categoryTotals);
 
     if (catNames.length > 0) {
-        // إنشاء تسميات مع الأيقونات
+        // ترجمة أسماء الفئات
         const translatedLabels = catNames.map(name => {
-            // الحصول على الأيقونة المناسبة
-            const icon = getIconForCategory(name);
-            // الحصول على الاسم المترجم
-            let displayName = name;
-            
-            // محاولة ترجمة الاسم إذا كان من الفئات الافتراضية
             const defaultKeysMap = {
                 'طعام': 'Food',
                 'مواصلات': 'Transport',
@@ -622,7 +699,6 @@ function updateCharts(categoryTotals, allTransactions) {
                 }
             }
             if (!engKey) {
-                // البحث في الترجمة الحالية
                 for (const [en, translated] of Object.entries(t('defaultCategories'))) {
                     if (name === translated) {
                         engKey = en;
@@ -631,12 +707,15 @@ function updateCharts(categoryTotals, allTransactions) {
                 }
             }
             if (engKey) {
-                displayName = t(`defaultCategories.${engKey}`);
+                return t(`defaultCategories.${engKey}`);
             }
-            
-            // إرجاع التسمية مع الأيقونة
-            return `${icon} ${displayName}`;
+            return name;
         });
+
+        // ألوان متوافقة مع الوضع
+        const colors = isDark 
+            ? ['#7c8cf0', '#4ade80', '#f87171', '#fbbf24', '#60a5fa', '#a78bfa', '#f472b6', '#34d399', '#fb923c']
+            : ['#667eea', '#48bb78', '#fc8181', '#f6ad55', '#68d391', '#9f7aea', '#f687b3', '#4fd1c5', '#ed8936'];
 
         chartPie = new Chart(ctxPie, {
             type: 'doughnut',
@@ -644,8 +723,9 @@ function updateCharts(categoryTotals, allTransactions) {
                 labels: translatedLabels,
                 datasets: [{
                     data: catValues,
-                    backgroundColor: ['#667eea','#48bb78','#fc8181','#f6ad55','#68d391','#9f7aea','#f687b3','#4fd1c5','#ed8936'],
-                    borderWidth: 2
+                    backgroundColor: colors.slice(0, catNames.length),
+                    borderWidth: 2,
+                    borderColor: borderColor
                 }]
             },
             options: {
@@ -654,6 +734,7 @@ function updateCharts(categoryTotals, allTransactions) {
                     legend: {
                         position: 'bottom',
                         labels: {
+                            color: textColor,
                             font: { size: 13 },
                             padding: 15,
                             usePointStyle: true,
@@ -665,10 +746,11 @@ function updateCharts(categoryTotals, allTransactions) {
         });
     }
 
-    // ===== الرسم البياني الخطي (بدون تغيير) =====
+    // ===== 2. الرسم البياني الخطي (Trend Chart) =====
     const ctxTrend = document.getElementById('trendChart').getContext('2d');
     if (chartTrend) chartTrend.destroy();
-    
+
+    // حساب بيانات آخر 7 أيام
     const today = new Date();
     const last7 = [];
     for (let i = 6; i >= 0; i--) {
@@ -676,40 +758,70 @@ function updateCharts(categoryTotals, allTransactions) {
         d.setDate(d.getDate() - i);
         last7.push(d.toISOString().split('T')[0]);
     }
-    
+
     const dailyTotals = last7.map(date => {
         const total = allTransactions
             .filter(t => t.type === 'expense' && t.date.startsWith(date))
             .reduce((sum, t) => sum + t.amount, 0);
         return total;
     });
-    
+
     const labels = last7.map(d => {
         const parts = d.split('-');
         return `${parts[1]}/${parts[2]}`;
     });
-    
+
     chartTrend = new Chart(ctxTrend, {
         type: 'line',
         data: {
             labels: labels,
             datasets: [{
-                label: t('dailyExpenses'),
+                label: t('dailyExpenses') || 'المصروفات اليومية',
                 data: dailyTotals,
-                borderColor: '#fc8181',
-                backgroundColor: 'rgba(252, 129, 129, 0.1)',
+                borderColor: isDark ? '#f87171' : '#fc8181',
+                backgroundColor: isDark ? 'rgba(248, 113, 113, 0.15)' : 'rgba(252, 129, 129, 0.1)',
                 tension: 0.3,
                 fill: true,
-                pointBackgroundColor: '#fc8181'
+                pointBackgroundColor: isDark ? '#f87171' : '#fc8181',
+                pointBorderColor: isDark ? '#f87171' : '#fc8181',
+                pointRadius: 4,
+                pointHoverRadius: 6
             }]
         },
         options: {
             responsive: true,
             plugins: {
-                legend: { display: true, position: 'top' }
+                legend: {
+                    display: true,
+                    position: 'top',
+                    labels: {
+                        color: textColor,
+                        font: { size: 13 }
+                    }
+                }
             },
             scales: {
-                y: { beginAtZero: true }
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        color: textColor,
+                        font: { size: 12 }
+                    },
+                    grid: {
+                        color: gridColor,
+                        drawBorder: false
+                    }
+                },
+                x: {
+                    ticks: {
+                        color: textColor,
+                        font: { size: 12 }
+                    },
+                    grid: {
+                        color: gridColor,
+                        drawBorder: false
+                    }
+                }
             }
         }
     });
@@ -1007,41 +1119,50 @@ window.addEventListener('click', (e) => {
 
 // ===== تهيئة التطبيق =====
 async function init() {
-    // قراءة اللغة المخزنة
+    // ===== 1. تهيئة الوضع (Dark/Light) =====
+    initTheme();
+
+    // ===== 2. تهيئة اللغة =====
     const savedLang = localStorage.getItem('lang') || 'ar';
     document.getElementById('langSelector').value = savedLang;
-    
-    // تطبيق اللغة (بدون إعادة تحميل لأننا في بداية التشغيل)
-    setLang(savedLang);
-    const html = document.documentElement;
-    if (savedLang === 'ar') {
-        html.setAttribute('dir', 'rtl');
-        html.setAttribute('lang', 'ar');
-    } else {
-        html.setAttribute('dir', 'ltr');
-        html.setAttribute('lang', savedLang);
-    }
-    applyTranslations();
+    changeLanguage(savedLang);
 
+    // ===== 3. التحقق من وجود توكن (تسجيل الدخول) =====
     if (token) {
+        // ===== عرض واجهة التطبيق =====
         document.getElementById('app').style.display = 'block';
         document.getElementById('loginPage').style.display = 'none';
+
+        // ===== تعيين اسم المستخدم مع الترجمة =====
         const user = JSON.parse(localStorage.getItem('user') || '{}');
-        
-        // تعيين اسم المستخدم مع الترجمة
         const userNameElement = document.getElementById('userName');
         const welcomeTranslated = t('welcome');
         userNameElement.innerHTML = `<i class="fas fa-user-circle"></i> ${welcomeTranslated} ${user.name || ''}`;
-        
+
+        // ===== تحميل البيانات =====
         await loadCategories();
-        await loadGoals();
         await loadTransactions();
         await loadSummary();
         await loadSettings();
+        await loadGoals();
+
+        // ===== تحديث ألوان الرسوم البيانية حسب الوضع =====
+        updateChartsColors();
+
+        // ===== تطبيق الترجمات على العناصر الجديدة =====
+        applyTranslations();
+
     } else {
+        // ===== عرض صفحة تسجيل الدخول =====
         document.getElementById('app').style.display = 'none';
         document.getElementById('loginPage').style.display = 'block';
     }
+
+    // ===== إخفاء مؤشر التحميل (إذا وجد) =====
+    const loader = document.getElementById('loader');
+    if (loader) loader.style.display = 'none';
+
+    console.log('✅ التطبيق جاهز');
 }
 
 // ===== ربط الأحداث (مع التحقق من وجود العناصر) =====
