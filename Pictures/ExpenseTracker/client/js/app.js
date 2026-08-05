@@ -715,6 +715,192 @@ function updateCharts(categoryTotals, allTransactions) {
     });
 }
 
+// ===== متغيرات الأهداف =====
+let goals = [];
+let editingGoalId = null;
+
+// ===== تحميل الأهداف =====
+async function loadGoals() {
+    try {
+        const res = await fetch(`${API}/goals`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (data.success) {
+            goals = data.data;
+            renderGoals();
+        }
+    } catch (err) {
+        console.error('Error loading goals:', err);
+    }
+}
+
+// ===== عرض الأهداف =====
+function renderGoals() {
+    const container = document.getElementById('goalsList');
+    if (!goals.length) {
+        container.innerHTML = `<p style="grid-column:1/-1;text-align:center;color:#999;">${t('noGoals') || 'لا توجد أهداف'}</p>`;
+        return;
+    }
+
+    container.innerHTML = goals.map(g => {
+        const progress = g.targetAmount > 0 ? Math.min((g.currentAmount / g.targetAmount) * 100, 100) : 0;
+        const isCompleted = g.isCompleted || progress >= 100;
+        const daysLeft = Math.ceil((new Date(g.deadline) - new Date()) / (1000 * 60 * 60 * 24));
+        const deadlineStr = daysLeft > 0 ? `${daysLeft} ${t('daysLeft') || 'يوم متبقي'}` : t('deadlinePassed') || 'انتهى الموعد';
+
+        return `
+        <div class="goal-card ${isCompleted ? 'completed' : ''}" style="border-left-color: ${g.color || '#667eea'}">
+            <div class="goal-header">
+                <span class="goal-icon">${g.icon || '🎯'}</span>
+                <span class="goal-name">${g.name}</span>
+            </div>
+            <div class="goal-amount">
+                <strong>${g.currentAmount.toFixed(0)}</strong> / ${g.targetAmount.toFixed(0)} ${CURRENCY}
+            </div>
+            <div class="goal-progress">
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: ${progress}%; background: ${g.color || '#667eea'};"></div>
+                </div>
+                <div class="progress-text">
+                    <span>${progress.toFixed(0)}%</span>
+                    <span>${deadlineStr}</span>
+                </div>
+            </div>
+            <div class="goal-actions">
+                <button class="btn btn-add" onclick="addToGoal('${g._id}')">
+                    <i class="fas fa-plus"></i> ${t('addAmount') || 'إضافة'}
+                </button>
+                <button class="btn btn-edit" onclick="editGoal('${g._id}')">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn btn-delete" onclick="deleteGoal('${g._id}')">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </div>
+        `;
+    }).join('');
+}
+
+// ===== إضافة مبلغ إلى الهدف =====
+async function addToGoal(goalId) {
+    const amount = prompt(t('enterAmount') || 'أدخل المبلغ المراد إضافته:');
+    if (amount === null) return;
+    if (isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
+        alert(t('enterValidAmount') || 'يرجى إدخال مبلغ صحيح');
+        return;
+    }
+
+    try {
+        const res = await fetch(`${API}/goals/${goalId}/add-amount`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ amount: parseFloat(amount) })
+        });
+        const data = await res.json();
+        if (data.success) {
+            await loadGoals();
+            if (data.isCompleted) {
+                alert(`🎉 ${t('goalAchieved') || 'تهانينا! لقد حققت هدفك!'}`);
+            }
+        } else {
+            alert('❌ ' + data.message);
+        }
+    } catch { alert('❌ ' + t('serverError')); }
+}
+
+// ===== إنشاء هدف جديد =====
+async function createGoal(e) {
+    e.preventDefault();
+    const name = document.getElementById('goalName').value.trim();
+    const targetAmount = parseFloat(document.getElementById('goalTarget').value);
+    const deadline = document.getElementById('goalDeadline').value;
+    const icon = document.getElementById('goalIcon').value.trim() || '🎯';
+    const color = document.getElementById('goalColor').value;
+
+    if (!name || !targetAmount || !deadline) {
+        alert(t('fillAllFields') || 'يرجى ملء جميع الحقول');
+        return;
+    }
+
+    try {
+        const res = await fetch(`${API}/goals`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ name, targetAmount, deadline, icon, color })
+        });
+        const data = await res.json();
+        if (data.success) {
+            closeGoalModal();
+            await loadGoals();
+            alert('✅ ' + (t('goalCreated') || 'تم إنشاء الهدف بنجاح'));
+        } else {
+            alert('❌ ' + data.message);
+        }
+    } catch { alert('❌ ' + t('serverError')); }
+}
+
+// ===== تعديل هدف =====
+async function editGoal(goalId) {
+    const goal = goals.find(g => g._id === goalId);
+    if (!goal) return;
+
+    document.getElementById('goalName').value = goal.name;
+    document.getElementById('goalTarget').value = goal.targetAmount;
+    document.getElementById('goalDeadline').value = goal.deadline.split('T')[0];
+    document.getElementById('goalIcon').value = goal.icon || '🎯';
+    document.getElementById('goalColor').value = goal.color || '#667eea';
+    editingGoalId = goalId;
+    document.getElementById('goalModal').style.display = 'flex';
+}
+
+// ===== حذف هدف =====
+async function deleteGoal(goalId) {
+    if (!confirm(t('deleteConfirm') || 'هل أنت متأكد من حذف هذا الهدف؟')) return;
+    try {
+        const res = await fetch(`${API}/goals/${goalId}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (data.success) {
+            await loadGoals();
+        } else {
+            alert('❌ ' + data.message);
+        }
+    } catch { alert('❌ ' + t('serverError')); }
+}
+
+// ===== فتح/إغلاق النافذة المنبثقة =====
+function openGoalModal() {
+    document.getElementById('goalForm').reset();
+    editingGoalId = null;
+    document.getElementById('goalModal').style.display = 'flex';
+}
+
+function closeGoalModal() {
+    document.getElementById('goalModal').style.display = 'none';
+}
+
+// ===== ربط الأحداث =====
+document.getElementById('addGoalBtn').addEventListener('click', openGoalModal);
+document.getElementById('closeGoalModal').addEventListener('click', closeGoalModal);
+document.getElementById('goalForm').addEventListener('submit', createGoal);
+window.addEventListener('click', (e) => {
+    if (e.target === document.getElementById('goalModal')) closeGoalModal();
+});
+
+// ===== تحديث init لتحميل الأهداف =====
+// أضف هذا السطر داخل init() بعد loadCategories():
+await loadGoals();
+
 // ===== تصدير CSV =====
 function exportCSV() {
     if (!transactions.length) return alert(t('noDataToExport'));
