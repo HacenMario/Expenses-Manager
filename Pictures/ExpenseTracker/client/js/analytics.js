@@ -150,26 +150,29 @@ function renderAnalytics(analytics) {
     }
 
     // ===== 5. الملخص =====
-    let summaryHtml = '';
-    const summary = analytics.summary;
-    if (summary && typeof summary === 'object') {
-        const totalExpenses = (typeof summary.totalExpenses === 'number' && isFinite(summary.totalExpenses)) ? summary.totalExpenses : 0;
-        const totalIncome = (typeof summary.totalIncome === 'number' && isFinite(summary.totalIncome)) ? summary.totalIncome : 0;
-        const transactionCount = summary.transactionCount || 0;
-        const avgExpense = (typeof summary.averageExpense === 'number' && isFinite(summary.averageExpense)) ? summary.averageExpense : 0;
+let summaryHtml = '';
+const summary = analytics.summary;
+if (summary && typeof summary === 'object') {
+    const totalExpenses = (typeof summary.totalExpenses === 'number' && isFinite(summary.totalExpenses)) ? summary.totalExpenses : 0;
+    const totalIncome = (typeof summary.totalIncome === 'number' && isFinite(summary.totalIncome)) ? summary.totalIncome : 0;
+    const transactionCount = summary.transactionCount || 0;
+    const expenseCount = summary.expenseCount || 0;
+    // استخدام المتوسط المحسوب من الخادم مباشرة
+    const avgExpense = (typeof summary.averageExpense === 'number' && isFinite(summary.averageExpense)) ? summary.averageExpense : 0;
 
-        summaryHtml = `
-            <div class="summary-card">
-                <h4>📋 ملخص سريع</h4>
-                <div class="summary-grid">
-                    <div><span>المصروفات الكلية</span> <strong>${safeToFixed(totalExpenses)} DZD</strong></div>
-                    <div><span>الدخل الكلي</span> <strong>${safeToFixed(totalIncome)} DZD</strong></div>
-                    <div><span>عدد المعاملات</span> <strong>${transactionCount}</strong></div>
-                    <div><span>متوسط الإنفاق</span> <strong>${safeToFixed(avgExpense)} DZD</strong></div>
-                </div>
+    summaryHtml = `
+        <div class="summary-card">
+            <h4>📋 ملخص سريع</h4>
+            <div class="summary-grid">
+                <div><span>المصروفات الكلية</span> <strong>${safeToFixed(totalExpenses)} DZD</strong></div>
+                <div><span>الدخل الكلي</span> <strong>${safeToFixed(totalIncome)} DZD</strong></div>
+                <div><span>عدد المعاملات</span> <strong>${transactionCount}</strong></div>
+                <div><span>عدد معاملات المصروف</span> <strong>${expenseCount}</strong></div>
+                <div><span>متوسط الإنفاق لكل معاملة مصروف</span> <strong>${safeToFixed(avgExpense)} DZD</strong></div>
             </div>
-        `;
-    }
+        </div>
+    `;
+}
 
     // ===== تجميع كل الأقسام =====
     container.innerHTML = `
