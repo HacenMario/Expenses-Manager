@@ -1,5 +1,4 @@
 const ss = require('simple-statistics');
-const { LinearRegression } = require('ml-regression');
 const kmeans = require('ml-kmeans');
 
 // ===== 1. التنبؤ بالمصروفات (Exponential Smoothing) =====
@@ -16,7 +15,7 @@ function predictExpenses(transactions, days = 30) {
     const values = dates.map(d => dailyExpenses[d]);
 
     if (values.length < 7) {
-        return { message: 'لا توجد بيانات كافية للتنبؤ (تحتاج 7 أيام على الأقل)' };
+        return { message: 'insufficient_data' };
     }
 
     const alpha = 0.3;
@@ -36,24 +35,25 @@ function predictExpenses(transactions, days = 30) {
     }
 
     const mae = ss.meanAbsoluteDeviation(values);
-    const confidence = Math.max(0, Math.min(1, 1 - (mae / (ss.mean(values) || 1))));
+    const mean = ss.mean(values);
+    const confidence = mean > 0 ? Math.max(0, Math.min(100, (1 - (mae / mean)) * 100)) : 0;
 
     return {
         predictions: futurePredictions,
-        averageDaily: ss.mean(values),
+        averageDaily: ss.mean(values) || 0,
         trend: values[values.length - 1] > values[0] ? 'increasing' : 'decreasing',
-        confidence: confidence * 100,
+        confidence: confidence,
         nextMonthTotal: futurePredictions.reduce((sum, p) => sum + p.predictedAmount, 0)
     };
 }
 
-// ===== 2. تحليل الارتباط بين الفئات (معامل بيرسون) =====
+// ===== 2. تحليل الارتباط بين الفئات =====
 function analyzeCorrelations(transactions) {
     const expenses = transactions.filter(t => t.type === 'expense');
     const categories = [...new Set(expenses.map(t => t.category))];
     
     if (categories.length < 2) {
-        return { message: 'لا توجد فئات كافية للتحليل' };
+        return { message: 'insufficient_data' };
     }
 
     const dailyData = {};
@@ -81,8 +81,8 @@ function analyzeCorrelations(transactions) {
                     category1: categories[i],
                     category2: categories[j],
                     correlation: r,
-                    strength: Math.abs(r) > 0.7 ? 'قوية' : Math.abs(r) > 0.5 ? 'متوسطة' : 'ضعيفة',
-                    type: r > 0 ? 'طردية (زيادة مع زيادة)' : 'عكسية (زيادة مع نقصان)'
+                    strength: Math.abs(r) > 0.7 ? 'strong' : Math.abs(r) > 0.5 ? 'medium' : 'weak',
+                    type: r > 0 ? 'positive' : 'negative'
                 });
             }
         }
@@ -91,14 +91,14 @@ function analyzeCorrelations(transactions) {
     return correlations.sort((a, b) => Math.abs(b.correlation) - Math.abs(a.correlation));
 }
 
-// ===== 3. الكشف عن الشذوذ (Z-Score + IQR) =====
+// ===== 3. الكشف عن الشذوذ =====
 function detectAnomalies(transactions) {
     const amounts = transactions
         .filter(t => t.type === 'expense')
         .map(t => t.amount);
 
     if (amounts.length < 5) {
-        return { message: 'لا توجد بيانات كافية لاكتشاف الشذوذ (تحتاج 5 معاملات على الأقل)' };
+        return { message: 'insufficient_data' };
     }
 
     const mean = ss.mean(amounts);
@@ -116,21 +116,21 @@ function detectAnomalies(transactions) {
             return zScore > 2.5 || t.amount < lowerBound || t.amount > upperBound;
         })
         .map(t => ({
-            ...t._doc,
-            reason: t.amount > upperBound ? 'أعلى من المعتاد (Outlier)' :
-                    t.amount < lowerBound ? 'أقل من المعتاد (Outlier)' :
-                    'تباين كبير (Z-Score)',
-            deviation: ((t.amount - mean) / (std || 1)).toFixed(2)
+            description: t.description || 'Unknown',
+            amount: t.amount,
+            reason: t.amount > upperBound ? 'high_outlier' :
+                    t.amount < lowerBound ? 'low_outlier' : 'zscore',
+            deviation: ((t.amount - mean) / (std || 1)) || 0
         }));
 
     return anomalies;
 }
 
-// ===== 4. تصنيف السلوك المالي (K-Means Clustering) =====
+// ===== 4. تصنيف السلوك المالي =====
 function classifySpendingBehavior(transactions) {
     const expenses = transactions.filter(t => t.type === 'expense');
     if (expenses.length < 10) {
-        return { message: 'لا توجد بيانات كافية للتصنيف (تحتاج 10 معاملات على الأقل)' };
+        return { message: 'insufficient_data' };
     }
 
     const categories = [...new Set(expenses.map(t => t.category))];
@@ -141,33 +141,39 @@ function classifySpendingBehavior(transactions) {
     ]);
 
     const k = Math.min(3, Math.floor(expenses.length / 4));
-    if (k < 2) return { message: 'لا توجد بيانات كافية للتصنيف' };
+    if (k < 2) return { message: 'insufficient_data' };
 
     const result = kmeans(features, k);
     const clusters = result.clusters;
 
     const clusterAnalysis = [];
+    const allAmounts = expenses.map(t => t.amount);
+    const avgAll = ss.mean(allAmounts);
+    
     for (let i = 0; i < k; i++) {
         const clusterItems = expenses.filter((_, idx) => clusters[idx] === i);
-        const avgAmount = ss.mean(clusterItems.map(t => t.amount));
-        const commonCategory = ss.mode(clusterItems.map(t => t.category));
-        const avgDay = ss.mean(clusterItems.map(t => new Date(t.date).getDate()));
+        const avgAmount = ss.mean(clusterItems.map(t => t.amount)) || 0;
+        const commonCategory = ss.mode(clusterItems.map(t => t.category)) || 'Other';
+        const avgDay = ss.mean(clusterItems.map(t => new Date(t.date).getDate())) || 0;
+        
+        let type = 'medium';
+        if (avgAmount > avgAll * 1.3) type = 'high';
+        else if (avgAmount < avgAll * 0.7) type = 'low';
         
         clusterAnalysis.push({
             cluster: i + 1,
             count: clusterItems.length,
             averageAmount: avgAmount,
-            commonCategory: commonCategory || 'متنوع',
+            commonCategory: commonCategory,
             averageDay: Math.round(avgDay),
-            type: avgAmount > ss.mean(expenses.map(t => t.amount)) * 1.3 ? 'إنفاق مرتفع' :
-                  avgAmount < ss.mean(expenses.map(t => t.amount)) * 0.7 ? 'إنفاق منخفض' : 'إنفاق متوسط'
+            type: type
         });
     }
 
     return clusterAnalysis;
 }
 
-// ===== 5. توليد توصيات ذكية =====
+// ===== 5. توليد التوصيات (بيانات خام) =====
 function generateInsights(transactions, monthlyBudget, goals) {
     const expenses = transactions.filter(t => t.type === 'expense');
     const totalExpenses = expenses.reduce((s, t) => s + t.amount, 0);
@@ -178,100 +184,117 @@ function generateInsights(transactions, monthlyBudget, goals) {
 
     const insights = [];
 
-    // توصية 1: التنبؤ بالمستقبل
-    if (predictions && predictions.nextMonthTotal) {
-        const projectedExpense = predictions.nextMonthTotal;
-        const budgetWarning = projectedExpense > monthlyBudget * 1.2;
+    // 1. التنبؤ بالمستقبل
+    if (predictions && predictions.nextMonthTotal && predictions.nextMonthTotal > 0) {
+        const projected = predictions.nextMonthTotal;
+        const budgetWarning = projected > monthlyBudget * 1.2;
         insights.push({
             type: budgetWarning ? 'warning' : 'info',
-            title: budgetWarning ? '⚠️ تحذير: توقع تجاوز الميزانية' : '📊 توقع المصروفات الشهرية',
-            description: budgetWarning ?
-                `من المتوقع أن تنفق ${projectedExpense.toFixed(0)} DZD الشهر القادم، وهو ما يتجاوز ميزانيتك الشهرية (${monthlyBudget} DZD) بنسبة ${((projectedExpense / monthlyBudget) * 100 - 100).toFixed(0)}%` :
-                `من المتوقع أن تنفق ${projectedExpense.toFixed(0)} DZD الشهر القادم، ضمن ميزانيتك الشهرية (${monthlyBudget} DZD)`,
-            action: budgetWarning ? 'فكر في تقليل النفقات غير الضرورية' : 'استمر في الإنفاق الحكيم'
+            template: budgetWarning ? 'budget_exceed_forecast' : 'budget_forecast',
+            data: {
+                projectedExpense: projected,
+                monthlyBudget: monthlyBudget,
+                percentage: ((projected / monthlyBudget) * 100 - 100).toFixed(0)
+            }
         });
     }
 
-    // توصية 2: أقوى ارتباط بين الفئات
-    if (correlations && correlations.length > 0) {
-        const topCorrelation = correlations[0];
+    // 2. أقوى ارتباط
+    if (correlations && correlations.length > 0 && !correlations.message) {
+        const top = correlations[0];
         insights.push({
             type: 'info',
-            title: '🔗 علاقة بين الفئات',
-            description: `هناك علاقة ${topCorrelation.strength} ${topCorrelation.type} بين "${topCorrelation.category1}" و "${topCorrelation.category2}" (معامل الارتباط: ${topCorrelation.correlation.toFixed(2)})`,
-            action: 'حاول مراقبة هاتين الفئتين معاً للتحكم في الإنفاق'
+            template: 'correlation_found',
+            data: {
+                category1: top.category1,
+                category2: top.category2,
+                strength: top.strength,
+                type: top.type,
+                correlation: top.correlation
+            }
         });
     }
 
-    // توصية 3: الشذوذ
-    if (anomalies && anomalies.length > 0) {
-        const topAnomaly = anomalies[0];
+    // 3. الشذوذ
+    if (anomalies && anomalies.length > 0 && !anomalies.message) {
+        const top = anomalies[0];
         insights.push({
             type: 'danger',
-            title: '🚨 نفقة غير معتادة',
-            description: `تم اكتشاف معاملة غير عادية: "${topAnomaly.description}" بقيمة ${topAnomaly.amount} DZD (${topAnomaly.reason})`,
-            action: 'تأكد من صحة هذه المعاملة وتأكد من عدم وجود خطأ'
+            template: 'anomaly_detected',
+            data: {
+                description: top.description,
+                amount: top.amount,
+                reason: top.reason
+            }
         });
     }
 
-    // توصية 4: تقدم الأهداف
+    // 4. تقدم الأهداف
     if (goals && goals.length > 0) {
-        const closestGoal = goals
+        const closest = goals
             .filter(g => !g.isCompleted)
             .sort((a, b) => (b.currentAmount / b.targetAmount) - (a.currentAmount / a.targetAmount))[0];
-        if (closestGoal) {
-            const progress = (closestGoal.currentAmount / closestGoal.targetAmount) * 100;
-            const remaining = closestGoal.targetAmount - closestGoal.currentAmount;
+        if (closest) {
+            const progress = (closest.currentAmount / closest.targetAmount) * 100;
             insights.push({
                 type: progress > 80 ? 'success' : 'info',
-                title: '🎯 تقدم هدف الادخار',
-                description: `${closestGoal.name}: تم تحقيق ${progress.toFixed(0)}% من الهدف (${remaining.toFixed(0)} DZD متبقية)`,
-                action: progress > 80 ? 'أنت على وشك تحقيق هدفك! استمر' : 'يمكنك زيادة الادخار قليلاً للوصول إلى الهدف'
+                template: 'goal_progress',
+                data: {
+                    name: closest.name,
+                    progress: progress,
+                    remaining: closest.targetAmount - closest.currentAmount,
+                    target: closest.targetAmount,
+                    current: closest.currentAmount
+                }
             });
         }
     }
 
-    // توصية 5: السلوك المالي
-    if (clusters && clusters.length > 0) {
-        const highestCluster = clusters.reduce((a, b) => a.averageAmount > b.averageAmount ? a : b);
+    // 5. السلوك المالي
+    if (clusters && clusters.length > 0 && !clusters.message) {
+        const highest = clusters.reduce((a, b) => a.averageAmount > b.averageAmount ? a : b);
         insights.push({
             type: 'info',
-            title: '📈 نمط الإنفاق',
-            description: `معظم إنفاقك (${highestCluster.count} معاملة) هو ${highestCluster.type} بمتوسط ${highestCluster.averageAmount.toFixed(0)} DZD، وأغلبها في "${highestCluster.commonCategory}"`,
-            action: highestCluster.type === 'إنفاق مرتفع' ? 'يمكنك مراجعة هذه المعاملات للبحث عن فرص للتوفير' : 'أنت تدير ميزانيتك بشكل جيد'
+            template: 'spending_behavior',
+            data: {
+                count: highest.count,
+                type: highest.type,
+                avgAmount: highest.averageAmount,
+                category: highest.commonCategory
+            }
         });
     }
 
-    // توصية 6: توفير مقترح
-    const topCategory = ss.mode(expenses.map(t => t.category)) || 'غير محدد';
-    const topCategoryTotal = expenses.filter(t => t.category === topCategory).reduce((s, t) => s + t.amount, 0);
-    if (topCategoryTotal > totalExpenses * 0.3) {
-        insights.push({
-            type: 'suggestion',
-            title: '💡 اقتراح توفير',
-            description: `فئة "${topCategory}" تشكل ${((topCategoryTotal / totalExpenses) * 100).toFixed(0)}% من إجمالي مصروفاتك (${topCategoryTotal.toFixed(0)} DZD)`,
-            action: `حاول تقليل الإنفاق على "${topCategory}" بنسبة 10% لتوفير ${(topCategoryTotal * 0.1).toFixed(0)} DZD شهرياً`
-        });
+    // 6. اقتراح توفير
+    if (expenses.length > 0) {
+        const topCategory = ss.mode(expenses.map(t => t.category)) || 'Other';
+        const topTotal = expenses.filter(t => t.category === topCategory).reduce((s, t) => s + t.amount, 0);
+        if (topTotal > totalExpenses * 0.3) {
+            insights.push({
+                type: 'suggestion',
+                template: 'saving_suggestion',
+                data: {
+                    category: topCategory,
+                    percentage: ((topTotal / totalExpenses) * 100),
+                    amount: topTotal,
+                    savingsAmount: topTotal * 0.1
+                }
+            });
+        }
     }
 
     return insights;
 }
 
-// ===== دالة رئيسية لتوليد جميع التحليلات =====
+// ===== دالة رئيسية =====
 function generateFullAnalytics(transactions, user) {
     const monthlyBudget = user.monthlyBudget || 1000;
-    const goals = [];
-    
-    // حساب المصروفات والدخل
     const expenseTransactions = transactions.filter(t => t.type === 'expense');
     const incomeTransactions = transactions.filter(t => t.type === 'income');
     
     const totalExpenses = expenseTransactions.reduce((s, t) => s + t.amount, 0);
     const totalIncome = incomeTransactions.reduce((s, t) => s + t.amount, 0);
-    const totalCount = transactions.length;
     const expenseCount = expenseTransactions.length;
-    
-    // المتوسط الصحيح = إجمالي المصروفات / عدد معاملات المصروف
     const averageExpense = expenseCount > 0 ? totalExpenses / expenseCount : 0;
 
     return {
@@ -279,14 +302,14 @@ function generateFullAnalytics(transactions, user) {
         correlations: analyzeCorrelations(transactions),
         anomalies: detectAnomalies(transactions),
         clusters: classifySpendingBehavior(transactions),
-        insights: generateInsights(transactions, monthlyBudget, goals),
+        insights: generateInsights(transactions, monthlyBudget, []),
         summary: {
             totalExpenses: totalExpenses,
             totalIncome: totalIncome,
-            transactionCount: totalCount,
+            transactionCount: transactions.length,
             expenseCount: expenseCount,
             categories: [...new Set(transactions.map(t => t.category))],
-            averageExpense: averageExpense  // الآن يحسب بشكل صحيح
+            averageExpense: averageExpense
         }
     };
 }
