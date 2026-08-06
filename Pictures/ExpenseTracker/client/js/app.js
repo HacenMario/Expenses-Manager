@@ -1106,15 +1106,15 @@ async function init() {
         await loadGoals();
         await loadDashboard();
 
+        // ===== تحميل التحليلات =====
+if (typeof loadAnalytics === 'function') {
+    await loadAnalytics();
+}
+
     } else {
         document.getElementById('app').style.display = 'none';
         document.getElementById('loginPage').style.display = 'block';
     }
-}
-
-// ===== تحميل التحليلات =====
-if (typeof loadAnalytics === 'function') {
-    await loadAnalytics();
 }
 
 // ===== ربط الأحداث =====
