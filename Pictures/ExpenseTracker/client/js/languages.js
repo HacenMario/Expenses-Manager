@@ -525,6 +525,10 @@ function setLang(lang) {
         currentLang = lang;
         localStorage.setItem('lang', lang);
         applyTranslations();
+        // ===== إعادة تحميل التحليلات عند تغيير اللغة =====
+        if (window.loadAnalytics && typeof window.loadAnalytics === 'function') {
+            setTimeout(() => window.loadAnalytics(), 100);
+        }
     }
 }
 
@@ -537,13 +541,16 @@ function t(key, params = {}) {
         if (value && value[k] !== undefined) value = value[k];
         else return key;
     }
-    if (typeof value === 'function') return value(params);
     if (typeof value === 'string' && params) {
-        // استبدال المتغيرات بين { }
         return value.replace(/\{(\w+)\}/g, (match, p1) => params[p1] || match);
     }
     return value;
 }
+
+// جعل الدوال متاحة في النطاق العام
+window.t = t;
+window.setLang = setLang;
+window.currentLang = currentLang;
 
 function applyTranslations() {
     // ترجمة النصوص الثابتة في الصفحة
