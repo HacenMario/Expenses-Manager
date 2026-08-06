@@ -1172,6 +1172,9 @@ function renderAnalytics(analytics) {
     `;
 }
 
+window.loadAnalytics = loadAnalytics;
+window.renderAnalytics = renderAnalytics;
+
 // ===== التصفية والبحث =====
 function filterTransactions() {
     const search = document.getElementById('searchInput').value.toLowerCase();
@@ -1203,6 +1206,7 @@ function changeLanguage(lang) {
     if (token) {
         updateUserLanguage(lang);
     }
+    // إعادة تحميل الصفحة لتطبيق جميع التغييرات
     window.location.reload();
 }
 
