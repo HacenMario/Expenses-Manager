@@ -69,6 +69,33 @@ function getCurrencySymbol() {
     return CURRENCY;
 }
 
+// ===== التحقق من صحة التوكن =====
+function isTokenValid() {
+    const token = localStorage.getItem('token');
+    if (!token) return false;
+    
+    try {
+        // فك تشفير التوكن للتحقق من انتهاء الصلاحية
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const expiry = payload.exp * 1000; // تحويل إلى ميلي ثانية
+        return Date.now() < expiry;
+    } catch (e) {
+        return false;
+    }
+}
+
+// ===== تحديث التوكن إذا لزم الأمر =====
+async function refreshTokenIfNeeded() {
+    if (!isTokenValid()) {
+        console.warn('⚠️ Token expired, redirecting to login');
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = '/';
+        return false;
+    }
+    return true;
+}
+
 // ===== دوال المصادقة =====
 async function register() {
     const name = document.getElementById('regName').value.trim();
@@ -1004,8 +1031,19 @@ function safeToFixed(value, decimals = 0) {
 async function loadAnalytics() {
     const container = document.getElementById('analyticsContainer');
     if (!container) return;
+    container.innerHTML = `<p>⏳ ${t('loadingAnalytics')}</p>`;
 
-    container.innerHTML = `<p>⏳ جاري تحميل التحليلات...</p>`;
+    // التحقق من صحة التوكن
+    if (!isTokenValid()) {
+        container.innerHTML = `<div class="analytics-error"><i class="fas fa-exclamation-triangle"></i><p>${t('sessionExpired')}</p></div>`;
+        // إعادة التوجيه لتسجيل الدخول بعد 3 ثوانٍ
+        setTimeout(() => {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = '/';
+        }, 3000);
+        return;
+    }
 
     try {
         const res = await fetch(`${API}/analytics/insights`, {
