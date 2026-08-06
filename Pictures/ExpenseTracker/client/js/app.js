@@ -1112,6 +1112,11 @@ async function init() {
     }
 }
 
+// ===== تحميل التحليلات =====
+if (typeof loadAnalytics === 'function') {
+    await loadAnalytics();
+}
+
 // ===== ربط الأحداث =====
 const loginForm = document.getElementById('loginForm');
 if (loginForm) loginForm.addEventListener('submit', (e) => { e.preventDefault(); login(); });
