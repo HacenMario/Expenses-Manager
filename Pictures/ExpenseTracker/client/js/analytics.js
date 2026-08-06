@@ -10,15 +10,39 @@ async function loadAnalytics() {
     if (!container) return;
     container.innerHTML = `<p>⏳ ${t('loadingAnalytics')}</p>`;
 
+    // 1. التأكد من وجود التوكن
+    const token = localStorage.getItem('token');
+    if (!token) {
+        container.innerHTML = `<div class="analytics-error"><i class="fas fa-exclamation-triangle"></i><p>${t('loginRequired')}</p></div>`;
+        return;
+    }
+
     try {
+        // 2. إرسال الطلب مع التوكن في الهيدر
         const res = await fetch(`${API}/analytics/insights`, {
-            headers: { 'Authorization': `Bearer ${token}` }
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            }
         });
+
+        // 3. معالجة حالة 401 (توكن منتهي أو غير صحيح)
+        if (res.status === 401) {
+            console.warn('⚠️ Token expired or invalid. Trying to refresh...');
+            // محاولة إعادة التوجيه لتسجيل الدخول
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = '/';
+            return;
+        }
+
+        // 4. قراءة البيانات
         const data = await res.json();
         if (data.success) {
             renderAnalytics(data.data);
         } else {
-            container.innerHTML = `<div class="analytics-error"><i class="fas fa-exclamation-triangle"></i><p>${t('analyticsError')}</p></div>`;
+            container.innerHTML = `<div class="analytics-error"><i class="fas fa-exclamation-triangle"></i><p>${data.message || t('analyticsError')}</p></div>`;
         }
     } catch (err) {
         console.error('Error loading analytics:', err);
