@@ -55,63 +55,69 @@ self.addEventListener('activate', (event) => {
 
 // ===== استراتيجية التخزين المؤقت (Cache First, ثم الشبكة) =====
 self.addEventListener('fetch', (event) => {
-  // تجاهل طلبات API (لا نخزنها مؤقتاً)
-  if (event.request.url.includes('/api/')) {
-    console.log('[SW] API request, skipping cache:', event.request.url);
-    return event.respondWith(fetch(event.request));
-  }
+    const request = event.request;
 
-  // تجاهل طلبات التحليلات والإحصائيات
-  if (event.request.url.includes('analytics') || event.request.url.includes('gtag')) {
-    return event.respondWith(fetch(event.request));
-  }
+    // ===== تجاهل طلبات API (لا نخزنها مؤقتاً) =====
+    if (request.url.includes('/api/')) {
+        console.log('[SW] API request, skipping cache:', request.url);
+        return event.respondWith(fetch(request));
+    }
 
-  // تجاهل طلبات الأيقونات الخارجية
-  if (event.request.url.includes('cdn') || event.request.url.includes('font')) {
-    return event.respondWith(fetch(event.request));
-  }
+    // ===== تجاهل طلبات التحليلات والإحصائيات =====
+    if (request.url.includes('analytics') || request.url.includes('gtag')) {
+        return event.respondWith(fetch(request));
+    }
 
-  event.respondWith(
-    caches.match(event.request)
-      .then((cachedResponse) => {
-        // إذا كان الملف موجوداً في الكاش، أعده
-        if (cachedResponse) {
-          console.log('[SW] Returning cached:', event.request.url);
-          return cachedResponse;
-        }
+    // ===== تجاهل طلبات الأيقونات الخارجية =====
+    if (request.url.includes('cdn') || request.url.includes('font')) {
+        return event.respondWith(fetch(request));
+    }
 
-        // إذا لم يكن موجوداً، جربه من الشبكة
-        console.log('[SW] Fetching from network:', event.request.url);
-        return fetch(event.request)
-          .then((networkResponse) => {
-            // لا نخزن استجابات غير ناجحة
-            if (!networkResponse || networkResponse.status !== 200) {
-              return networkResponse;
-            }
+    // ===== تجاهل طلبات POST (لا يمكن تخزينها مؤقتاً) =====
+    if (request.method !== 'GET') {
+        console.log('[SW] Skipping non-GET request:', request.method, request.url);
+        return event.respondWith(fetch(request));
+    }
 
-            // نسخ الاستجابة وتخزينها مؤقتاً
-            const responseClone = networkResponse.clone();
-            caches.open(CACHE_NAME)
-              .then((cache) => {
-                cache.put(event.request, responseClone);
-                console.log('[SW] Cached new resource:', event.request.url);
-              })
-              .catch((error) => {
-                console.error('[SW] Cache put failed:', error);
-              });
+    event.respondWith(
+        caches.match(request)
+            .then((cachedResponse) => {
+                if (cachedResponse) {
+                    console.log('[SW] Returning cached:', request.url);
+                    return cachedResponse;
+                }
 
-            return networkResponse;
-          })
-          .catch((error) => {
-            console.error('[SW] Fetch failed:', error);
-            // محاولة إرجاع صفحة الخطأ إذا كانت الصفحة الرئيسية
-            if (event.request.url.includes('/index.html') || event.request.url === '/') {
-              return caches.match('/offline.html');
-            }
-            return new Response('Network error', { status: 503 });
-          });
-      })
-  );
+                console.log('[SW] Fetching from network:', request.url);
+                return fetch(request)
+                    .then((networkResponse) => {
+                        // لا نخزن استجابات غير ناجحة
+                        if (!networkResponse || networkResponse.status !== 200) {
+                            return networkResponse;
+                        }
+
+                        // نسخ الاستجابة وتخزينها مؤقتاً (فقط للـ GET)
+                        const responseClone = networkResponse.clone();
+                        caches.open(CACHE_NAME)
+                            .then((cache) => {
+                                cache.put(request, responseClone);
+                                console.log('[SW] Cached new resource:', request.url);
+                            })
+                            .catch((error) => {
+                                console.error('[SW] Cache put failed:', error);
+                            });
+
+                        return networkResponse;
+                    })
+                    .catch((error) => {
+                        console.error('[SW] Fetch failed:', error);
+                        // محاولة إرجاع صفحة الخطأ إذا كانت الصفحة الرئيسية
+                        if (request.url.includes('/index.html') || request.url === '/') {
+                            return caches.match('/offline.html');
+                        }
+                        return new Response('Network error', { status: 503 });
+                    });
+            })
+    );
 });
 
 // ===== التخزين المؤقت للطلبات (للعمل دون اتصال) =====
