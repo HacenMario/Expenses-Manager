@@ -1,4 +1,4 @@
-// ===== دالة مساعدة للتحويل الآمن =====
+// ===== دوال مساعدة آمنة =====
 function safeToFixed(value, decimals = 0) {
     if (value === undefined || value === null || typeof value !== 'number' || !isFinite(value)) return '0';
     return value.toFixed(decimals);
@@ -10,34 +10,24 @@ async function loadAnalytics() {
     if (!container) return;
     container.innerHTML = `<p>⏳ ${t('loadingAnalytics')}</p>`;
 
-    // 1. التأكد من وجود التوكن
-    const token = localStorage.getItem('token');
-    if (!token) {
-        container.innerHTML = `<div class="analytics-error"><i class="fas fa-exclamation-triangle"></i><p>${t('loginRequired')}</p></div>`;
-        return;
-    }
-
     try {
-        // 2. إرسال الطلب مع التوكن في الهيدر
+        const token = localStorage.getItem('token');
+        if (!token) {
+            container.innerHTML = `<div class="analytics-error"><i class="fas fa-exclamation-triangle"></i><p>${t('loginRequired')}</p></div>`;
+            return;
+        }
+
         const res = await fetch(`${API}/analytics/insights`, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            }
+            headers: { 'Authorization': `Bearer ${token}` }
         });
 
-        // 3. معالجة حالة 401 (توكن منتهي أو غير صحيح)
         if (res.status === 401) {
-            console.warn('⚠️ Token expired or invalid. Trying to refresh...');
-            // محاولة إعادة التوجيه لتسجيل الدخول
             localStorage.removeItem('token');
             localStorage.removeItem('user');
             window.location.href = '/';
             return;
         }
 
-        // 4. قراءة البيانات
         const data = await res.json();
         if (data.success) {
             renderAnalytics(data.data);
@@ -50,12 +40,10 @@ async function loadAnalytics() {
     }
 }
 
-// ===== عرض التحليلات (مع ترجمة ديناميكية) =====
+// ===== عرض التحليلات =====
 function renderAnalytics(analytics) {
     const container = document.getElementById('analyticsContainer');
     if (!container) return;
-
-    // التحقق من وجود البيانات
     if (!analytics || typeof analytics !== 'object') {
         container.innerHTML = `<p>${t('noAnalyticsData')}</p>`;
         return;
@@ -65,192 +53,167 @@ function renderAnalytics(analytics) {
     let insightsHtml = '';
     if (Array.isArray(analytics.insights) && analytics.insights.length > 0) {
         insightsHtml = analytics.insights.map(i => {
-            // ترجمة النص بناءً على القالب
-            let title = '';
-            let description = '';
-            let actionText = '';
+            let title = '', description = '', action = '';
+            const d = i.data || {};
 
-            // استخدام الترجمة مع إرسال البيانات
-            const data = i.data || {};
             switch (i.template) {
                 case 'budget_exceed_forecast':
                     title = t('insight.budget_exceed_forecast.title');
                     description = t('insight.budget_exceed_forecast.desc', {
-                        projected: safeToFixed(data.projectedExpense),
-                        budget: safeToFixed(data.monthlyBudget),
-                        percent: data.percentage
+                        projected: safeToFixed(d.projectedExpense),
+                        budget: safeToFixed(d.monthlyBudget),
+                        percent: d.percentage || '0'
                     });
-                    actionText = t('insight.budget_exceed_forecast.action');
+                    action = t('insight.budget_exceed_forecast.action');
                     break;
                 case 'budget_forecast':
                     title = t('insight.budget_forecast.title');
                     description = t('insight.budget_forecast.desc', {
-                        projected: safeToFixed(data.projectedExpense),
-                        budget: safeToFixed(data.monthlyBudget)
+                        projected: safeToFixed(d.projectedExpense),
+                        budget: safeToFixed(d.monthlyBudget)
                     });
-                    actionText = t('insight.budget_forecast.action');
+                    action = t('insight.budget_forecast.action');
                     break;
                 case 'correlation_found':
                     title = t('insight.correlation_found.title');
                     description = t('insight.correlation_found.desc', {
-                        cat1: data.category1,
-                        cat2: data.category2,
-                        strength: t(`strength.${data.strength}`) || data.strength,
-                        type: t(`correlationType.${data.type}`) || data.type,
-                        corr: safeToFixed(data.correlation, 2)
+                        cat1: d.category1 || '?',
+                        cat2: d.category2 || '?',
+                        strength: t(`strength.${d.strength}`) || d.strength,
+                        type: t(`correlationType.${d.type}`) || d.type,
+                        corr: safeToFixed(d.correlation, 2)
                     });
-                    actionText = t('insight.correlation_found.action');
+                    action = t('insight.correlation_found.action');
                     break;
                 case 'anomaly_detected':
                     title = t('insight.anomaly_detected.title');
                     description = t('insight.anomaly_detected.desc', {
-                        desc: data.description,
-                        amount: safeToFixed(data.amount),
-                        reason: t(`anomalyReason.${data.reason}`) || data.reason
+                        desc: d.description || 'Unknown',
+                        amount: safeToFixed(d.amount),
+                        reason: t(`anomalyReason.${d.reason}`) || d.reason
                     });
-                    actionText = t('insight.anomaly_detected.action');
+                    action = t('insight.anomaly_detected.action');
                     break;
                 case 'goal_progress':
                     title = t('insight.goal_progress.title');
                     description = t('insight.goal_progress.desc', {
-                        name: data.name,
-                        progress: safeToFixed(data.progress),
-                        remaining: safeToFixed(data.remaining)
+                        name: d.name || 'Goal',
+                        progress: safeToFixed(d.progress),
+                        remaining: safeToFixed(d.remaining)
                     });
-                    actionText = t('insight.goal_progress.action');
+                    action = t('insight.goal_progress.action');
                     break;
                 case 'spending_behavior':
                     title = t('insight.spending_behavior.title');
                     description = t('insight.spending_behavior.desc', {
-                        count: data.count,
-                        type: t(`spendingType.${data.type}`) || data.type,
-                        avg: safeToFixed(data.avgAmount),
-                        category: data.category
+                        count: d.count || 0,
+                        type: t(`spendingType.${d.type}`) || d.type,
+                        avg: safeToFixed(d.avgAmount),
+                        category: d.category || 'Other'
                     });
-                    actionText = t('insight.spending_behavior.action');
+                    action = t('insight.spending_behavior.action');
                     break;
                 case 'saving_suggestion':
                     title = t('insight.saving_suggestion.title');
                     description = t('insight.saving_suggestion.desc', {
-                        category: data.category,
-                        percent: safeToFixed(data.percentage),
-                        amount: safeToFixed(data.amount),
-                        savings: safeToFixed(data.savingsAmount)
+                        category: d.category || 'Other',
+                        percent: safeToFixed(d.percentage),
+                        amount: safeToFixed(d.amount),
+                        savings: safeToFixed(d.savingsAmount)
                     });
-                    actionText = t('insight.saving_suggestion.action');
+                    action = t('insight.saving_suggestion.action');
                     break;
                 default:
-                    title = i.title || t('insight.general.title');
-                    description = i.description || t('insight.general.desc');
-                    actionText = i.action || t('insight.general.action');
+                    title = '💡 ' + t('insight.general.title');
+                    description = t('insight.general.desc');
+                    action = t('insight.general.action');
             }
 
             return `
                 <div class="insight-card insight-${i.type || 'info'}">
                     <div class="insight-header">
-                        <span class="insight-icon">${title.split(' ')[0] || '💡'}</span>
                         <span class="insight-title">${title}</span>
                     </div>
                     <p class="insight-description">${description}</p>
-                    <div class="insight-action"><i class="fas fa-lightbulb"></i> ${actionText}</div>
+                    <div class="insight-action"><i class="fas fa-lightbulb"></i> ${action}</div>
                 </div>
             `;
         }).join('');
     } else {
-        insightsHtml = `<p>${t('noInsights')}</p>`;
+        insightsHtml = `<p style="color:#999;">${t('noInsights')}</p>`;
     }
 
     // ===== 2. التنبؤات =====
     let predictionsHtml = '';
-    const predictions = analytics.predictions;
-    if (predictions && typeof predictions.nextMonthTotal === 'number' && isFinite(predictions.nextMonthTotal)) {
-        const total = predictions.nextMonthTotal;
-        const conf = (typeof predictions.confidence === 'number' && isFinite(predictions.confidence)) ? predictions.confidence : 0;
-        const trend = predictions.trend === 'increasing' ? t('trend.up') : predictions.trend === 'decreasing' ? t('trend.down') : t('trend.stable');
+    const p = analytics.predictions;
+    if (p && typeof p.nextMonthTotal === 'number' && isFinite(p.nextMonthTotal) && p.nextMonthTotal > 0) {
         predictionsHtml = `
             <div class="prediction-card">
                 <h4>📊 ${t('prediction.title')}</h4>
                 <div class="prediction-total">
-                    <span class="prediction-amount">${safeToFixed(total)} DZD</span>
-                    <span class="prediction-confidence">${t('prediction.confidence')} ${safeToFixed(conf)}%</span>
+                    <span class="prediction-amount">${safeToFixed(p.nextMonthTotal)} DZD</span>
+                    <span class="prediction-confidence">${t('prediction.confidence')} ${safeToFixed(p.confidence)}%</span>
                 </div>
-                <div class="prediction-trend">${t('prediction.trend')} ${trend}</div>
+                <div class="prediction-trend">${t('prediction.trend')} ${t(`trend.${p.trend}`) || p.trend}</div>
             </div>
         `;
     }
 
     // ===== 3. الشذوذ =====
     let anomaliesHtml = '';
-    const anomalies = analytics.anomalies;
-    if (Array.isArray(anomalies) && anomalies.length > 0) {
+    const a = analytics.anomalies;
+    if (Array.isArray(a) && a.length > 0 && !a.message) {
         anomaliesHtml = `
             <div class="anomalies-card">
                 <h4>🚨 ${t('anomalies.title')}</h4>
-                ${anomalies.slice(0, 5).map(a => {
-                    const desc = a.description || t('anomalies.unknown');
-                    const amount = (typeof a.amount === 'number' && isFinite(a.amount)) ? a.amount : 0;
-                    const reason = a.reason ? t(`anomalyReason.${a.reason}`) || a.reason : t('anomalies.unknownReason');
-                    return `
-                        <div class="anomaly-item">
-                            <span>${desc}</span>
-                            <span class="anomaly-amount">${safeToFixed(amount)} DZD</span>
-                            <span class="anomaly-reason">${reason}</span>
-                        </div>
-                    `;
-                }).join('')}
+                ${a.slice(0, 5).map(item => `
+                    <div class="anomaly-item">
+                        <span>${item.description || t('anomalies.unknown')}</span>
+                        <span class="anomaly-amount">${safeToFixed(item.amount)} DZD</span>
+                        <span class="anomaly-reason">${t(`anomalyReason.${item.reason}`) || item.reason}</span>
+                    </div>
+                `).join('')}
             </div>
         `;
     }
 
     // ===== 4. الارتباطات =====
     let correlationsHtml = '';
-    const correlations = analytics.correlations;
-    if (Array.isArray(correlations) && correlations.length > 0) {
+    const c = analytics.correlations;
+    if (Array.isArray(c) && c.length > 0 && !c.message) {
         correlationsHtml = `
             <div class="correlations-card">
                 <h4>🔗 ${t('correlations.title')}</h4>
-                ${correlations.slice(0, 3).map(c => {
-                    const cat1 = c.category1 || '?';
-                    const cat2 = c.category2 || '?';
-                    const strength = t(`strength.${c.strength}`) || c.strength || t('strength.weak');
-                    const type = t(`correlationType.${c.type}`) || c.type || t('correlationType.unknown');
-                    return `
-                        <div class="correlation-item">
-                            <span>${cat1} ↔ ${cat2}</span>
-                            <span class="correlation-strength">${strength}</span>
-                            <span class="correlation-type">${type}</span>
-                        </div>
-                    `;
-                }).join('')}
+                ${c.slice(0, 3).map(item => `
+                    <div class="correlation-item">
+                        <span>${item.category1 || '?'} ↔ ${item.category2 || '?'}</span>
+                        <span class="correlation-strength">${t(`strength.${item.strength}`) || item.strength}</span>
+                        <span class="correlation-type">${t(`correlationType.${item.type}`) || item.type}</span>
+                    </div>
+                `).join('')}
             </div>
         `;
     }
 
     // ===== 5. الملخص =====
     let summaryHtml = '';
-    const summary = analytics.summary;
-    if (summary && typeof summary === 'object') {
-        const totalExpenses = (typeof summary.totalExpenses === 'number' && isFinite(summary.totalExpenses)) ? summary.totalExpenses : 0;
-        const totalIncome = (typeof summary.totalIncome === 'number' && isFinite(summary.totalIncome)) ? summary.totalIncome : 0;
-        const transactionCount = summary.transactionCount || 0;
-        const expenseCount = summary.expenseCount || 0;
-        const avgExpense = (typeof summary.averageExpense === 'number' && isFinite(summary.averageExpense)) ? summary.averageExpense : 0;
-
+    const s = analytics.summary;
+    if (s && typeof s === 'object') {
         summaryHtml = `
             <div class="summary-card">
                 <h4>📋 ${t('summary.title')}</h4>
                 <div class="summary-grid">
-                    <div><span>${t('summary.totalExpenses')}</span> <strong>${safeToFixed(totalExpenses)} DZD</strong></div>
-                    <div><span>${t('summary.totalIncome')}</span> <strong>${safeToFixed(totalIncome)} DZD</strong></div>
-                    <div><span>${t('summary.transactionCount')}</span> <strong>${transactionCount}</strong></div>
-                    <div><span>${t('summary.expenseCount')}</span> <strong>${expenseCount}</strong></div>
-                    <div><span>${t('summary.averageExpense')}</span> <strong>${safeToFixed(avgExpense)} DZD</strong></div>
+                    <div><span>${t('summary.totalExpenses')}</span> <strong>${safeToFixed(s.totalExpenses)} DZD</strong></div>
+                    <div><span>${t('summary.totalIncome')}</span> <strong>${safeToFixed(s.totalIncome)} DZD</strong></div>
+                    <div><span>${t('summary.transactionCount')}</span> <strong>${s.transactionCount || 0}</strong></div>
+                    <div><span>${t('summary.expenseCount')}</span> <strong>${s.expenseCount || 0}</strong></div>
+                    <div><span>${t('summary.averageExpense')}</span> <strong>${safeToFixed(s.averageExpense)} DZD</strong></div>
                 </div>
             </div>
         `;
     }
 
-    // ===== تجميع الكل =====
+    // ===== تجميع =====
     container.innerHTML = `
         <div class="analytics-grid">
             <div class="insights-section">${insightsHtml}</div>
@@ -261,3 +224,7 @@ function renderAnalytics(analytics) {
         </div>
     `;
 }
+
+// جعل الدوال متاحة في النطاق العام
+window.loadAnalytics = loadAnalytics;
+window.renderAnalytics = renderAnalytics;
