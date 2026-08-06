@@ -1418,7 +1418,7 @@ function setupTranslateButton() {
             initLanguageToggle({
                 sourceLang: 'ar',
                 targetLang: 'en',
-                sourceSymbol: 'ع',
+                sourceSymbol: 'Ar',
                 targetSymbol: 'En',
                 toggleButton: myButton
             });
