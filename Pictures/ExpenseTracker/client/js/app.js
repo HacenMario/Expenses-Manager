@@ -1411,9 +1411,6 @@ window.addEventListener('online', () => {
 
 // استدعاء الدالة بعد تحميل الصفحة
 document.addEventListener('DOMContentLoaded', () => {
-    // تأخير بسيط لضمان تحميل المكتبة
-    setTimeout(setupTranslateButton, 500);
-});
 
 // بدء التطبيق
 init();
