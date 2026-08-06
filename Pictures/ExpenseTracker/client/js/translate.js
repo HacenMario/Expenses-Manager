@@ -1,24 +1,53 @@
-// ===== زر ترجمة ذكي حسب اللغة المختارة =====
+// ===== زر ترجمة ذكي مع دعم الفرنسية =====
 (function() {
     let translateInstance = null;
     let isTranslated = false;
     let currentTargetLang = 'en';
+    let currentSourceLang = 'ar';
 
     // ===== تحديد اللغة المستهدفة بناءً على لغة الموقع =====
     function getTargetLanguage() {
         const currentLang = localStorage.getItem('lang') || 'ar';
+        currentSourceLang = 'ar'; // المصدر دائماً العربية
+        
         // إذا كانت اللغة العربية، نترجم إلى الإنجليزية (أو الفرنسية حسب اختيار المستخدم)
-        // إذا كانت لغة أخرى، نترجم إلى العربية
         if (currentLang === 'ar') {
-            return 'en'; // افتراضي: الإنجليزية
+            // هنا يمكن للمستخدم اختيار الترجمة إلى الإنجليزية أو الفرنسية
+            // نستخدم قيمة مخزنة أو نعرض خيارات
+            const preferredTarget = localStorage.getItem('translate_target') || 'en';
+            return preferredTarget; // 'en' أو 'fr'
         } else {
-            return 'ar'; // العودة للعربية
+            // إذا كانت اللغة غير عربية، نترجم إلى العربية
+            return 'ar';
         }
+    }
+
+    // ===== تحديث نص الزر =====
+    function updateButtonLabel(targetLang) {
+        const myButton = document.getElementById('translate-btn');
+        if (!myButton) return;
+
+        const langSymbol = targetLang === 'en' ? 'En' : targetLang === 'fr' ? 'Fr' : 'ع';
+        const langName = targetLang === 'en' ? 'الإنجليزية' : targetLang === 'fr' ? 'الفرنسية' : 'العربية';
+        myButton.innerHTML = `🌐 ${langSymbol}`;
+        myButton.title = `ترجمة إلى ${langName}`;
+    }
+
+    // ===== تبديل لغة الترجمة المستهدفة (بين الإنجليزية والفرنسية) =====
+    function cycleTranslateTarget() {
+        const currentLang = localStorage.getItem('lang') || 'ar';
+        if (currentLang === 'ar') {
+            // التبديل بين الإنجليزية والفرنسية
+            const currentTarget = localStorage.getItem('translate_target') || 'en';
+            const newTarget = currentTarget === 'en' ? 'fr' : 'en';
+            localStorage.setItem('translate_target', newTarget);
+            return newTarget;
+        }
+        return 'ar';
     }
 
     // ===== تهيئة الترجمة =====
     function setupTranslate() {
-        // التحقق من وجود المكتبة
         if (typeof initLanguageToggle !== 'function') {
             console.warn('⚠️ LanguageToggle library not loaded, retrying...');
             setTimeout(setupTranslate, 500);
@@ -27,29 +56,66 @@
 
         const myButton = document.getElementById('translate-btn');
         if (!myButton) {
-            console.warn('⚠️ translate-btn not found in DOM');
+            console.warn('⚠️ translate-btn not found');
             return;
         }
 
         // تحديد اللغة المستهدفة
-        const targetLang = getTargetLanguage();
+        let targetLang = getTargetLanguage();
         currentTargetLang = targetLang;
 
         // تحديث نص الزر
-        const langSymbol = targetLang === 'en' ? 'En' : targetLang === 'fr' ? 'Fr' : 'ع';
-        myButton.innerHTML = `🌐 ${langSymbol}`;
-        myButton.title = `ترجمة إلى ${targetLang === 'en' ? 'الإنجليزية' : targetLang === 'fr' ? 'الفرنسية' : 'العربية'}`;
+        updateButtonLabel(targetLang);
 
         // تهيئة الترجمة
         translateInstance = initLanguageToggle({
             sourceLang: 'ar',
             targetLang: targetLang,
             sourceSymbol: 'ع',
-            targetSymbol: langSymbol,
+            targetSymbol: targetLang === 'en' ? 'En' : targetLang === 'fr' ? 'Fr' : 'ع',
             toggleButton: myButton
         });
 
         console.log(`✅ Translation button initialized (target: ${targetLang})`);
+
+        // ===== إضافة حدث للنقر على الزر للتبديل بين اللغات =====
+        myButton.addEventListener('click', function(e) {
+            const currentLang = localStorage.getItem('lang') || 'ar';
+            if (currentLang === 'ar') {
+                // التبديل بين الإنجليزية والفرنسية
+                const newTarget = cycleTranslateTarget();
+                currentTargetLang = newTarget;
+                updateButtonLabel(newTarget);
+                
+                // إعادة تهيئة الترجمة
+                if (typeof initLanguageToggle === 'function') {
+                    translateInstance = initLanguageToggle({
+                        sourceLang: 'ar',
+                        targetLang: newTarget,
+                        sourceSymbol: 'ع',
+                        targetSymbol: newTarget === 'en' ? 'En' : 'Fr',
+                        toggleButton: myButton
+                    });
+                    console.log(`🔄 Switched translation to: ${newTarget}`);
+                }
+            } else {
+                // إذا كانت اللغة غير عربية، نترجم إلى العربية
+                const newTarget = 'ar';
+                currentTargetLang = newTarget;
+                updateButtonLabel(newTarget);
+                
+                if (typeof initLanguageToggle === 'function') {
+                    translateInstance = initLanguageToggle({
+                        sourceLang: 'ar',
+                        targetLang: newTarget,
+                        sourceSymbol: 'ع',
+                        targetSymbol: 'ع',
+                        toggleButton: myButton
+                    });
+                    console.log(`🔄 Switched translation to: Arabic`);
+                }
+            }
+        });
     }
 
     // ===== تحديث الترجمة عند تغيير اللغة =====
@@ -57,21 +123,17 @@
         const targetLang = getTargetLanguage();
         if (targetLang !== currentTargetLang) {
             currentTargetLang = targetLang;
-
             const myButton = document.getElementById('translate-btn');
             if (!myButton) return;
 
-            const langSymbol = targetLang === 'en' ? 'En' : targetLang === 'fr' ? 'Fr' : 'ع';
-            myButton.innerHTML = `🌐 ${langSymbol}`;
-            myButton.title = `ترجمة إلى ${targetLang === 'en' ? 'الإنجليزية' : targetLang === 'fr' ? 'الفرنسية' : 'العربية'}`;
+            updateButtonLabel(targetLang);
 
-            // إعادة تهيئة الترجمة
             if (typeof initLanguageToggle === 'function') {
                 translateInstance = initLanguageToggle({
                     sourceLang: 'ar',
                     targetLang: targetLang,
                     sourceSymbol: 'ع',
-                    targetSymbol: langSymbol,
+                    targetSymbol: targetLang === 'en' ? 'En' : targetLang === 'fr' ? 'Fr' : 'ع',
                     toggleButton: myButton
                 });
                 console.log(`🔄 Translation target updated to: ${targetLang}`);
@@ -95,12 +157,10 @@
     const langSelector = document.getElementById('langSelector');
     if (langSelector) {
         langSelector.addEventListener('change', function() {
-            // إعلام النظام بتغيير اللغة
             document.dispatchEvent(new CustomEvent('languageChanged'));
-            // تحديث الترجمة بعد تأخير بسيط
             setTimeout(updateTranslationTarget, 200);
         });
     }
 
-    console.log('📚 Translation module loaded');
+    console.log('📚 Translation module loaded (supports EN/FR)');
 })();
