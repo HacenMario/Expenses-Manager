@@ -30,6 +30,8 @@ async function loadAnalytics() {
 function renderAnalytics(analytics) {
     const container = document.getElementById('analyticsContainer');
     if (!container) return;
+
+    // التحقق من وجود البيانات
     if (!analytics || typeof analytics !== 'object') {
         container.innerHTML = `<p>${t('noAnalyticsData')}</p>`;
         return;
