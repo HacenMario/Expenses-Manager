@@ -1409,5 +1409,33 @@ window.addEventListener('online', () => {
     syncOfflineData();
 });
 
+// ===== تفعيل زر الترجمة من Google =====
+function setupTranslateButton() {
+    // التأكد من وجود المكتبة
+    if (typeof initLanguageToggle === 'function') {
+        const myButton = document.getElementById('translate-btn');
+        if (myButton) {
+            initLanguageToggle({
+                sourceLang: 'ar',
+                targetLang: 'en',
+                sourceSymbol: 'ع',
+                targetSymbol: 'En',
+                toggleButton: myButton
+            });
+            console.log('✅ Translation button initialized');
+        } else {
+            console.warn('⚠️ translate-btn not found in DOM');
+        }
+    } else {
+        console.warn('⚠️ LanguageToggle library not loaded yet');
+    }
+}
+
+// استدعاء الدالة بعد تحميل الصفحة
+document.addEventListener('DOMContentLoaded', () => {
+    // تأخير بسيط لضمان تحميل المكتبة
+    setTimeout(setupTranslateButton, 500);
+});
+
 // بدء التطبيق
 init();
