@@ -16,6 +16,7 @@ const {
 // ===== الحصول على جميع التحليلات =====
 router.get('/insights', protect, async (req, res) => {
     try {
+        // حماية المسار موجودة بالفعل في protect middleware
         const user = await User.findById(req.user.id);
         const transactions = await Transaction.find({ user: req.user.id });
         const goals = await SavingGoal.find({ user: req.user.id });
@@ -38,14 +39,18 @@ router.get('/insights', protect, async (req, res) => {
         }
 
         const analytics = generateFullAnalytics(transactions, user);
-        // دمج الأهداف في التوصيات (نمررها إلى الخدمة)
+        // دمج الأهداف في التوصيات
         analytics.insights = require('../services/analyticsService')
             .generateInsights(transactions, user.monthlyBudget || 1000, goals, user.language || 'ar');
 
         res.status(200).json({ success: true, data: analytics });
     } catch (error) {
         console.error('❌ Analytics error:', error.message);
-        res.status(500).json({ success: false, message: error.message });
+        // إرسال رسالة خطأ مناسبة
+        res.status(500).json({ 
+            success: false, 
+            message: error.message || 'فشل في تحميل التحليلات' 
+        });
     }
 });
 
