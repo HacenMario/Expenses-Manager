@@ -69,33 +69,6 @@ function getCurrencySymbol() {
     return CURRENCY;
 }
 
-// ===== التحقق من صحة التوكن =====
-function isTokenValid() {
-    const token = localStorage.getItem('token');
-    if (!token) return false;
-    
-    try {
-        // فك تشفير التوكن للتحقق من انتهاء الصلاحية
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        const expiry = payload.exp * 1000; // تحويل إلى ميلي ثانية
-        return Date.now() < expiry;
-    } catch (e) {
-        return false;
-    }
-}
-
-// ===== تحديث التوكن إذا لزم الأمر =====
-async function refreshTokenIfNeeded() {
-    if (!isTokenValid()) {
-        console.warn('⚠️ Token expired, redirecting to login');
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        window.location.href = '/';
-        return false;
-    }
-    return true;
-}
-
 // ===== دوال المصادقة =====
 async function register() {
     const name = document.getElementById('regName').value.trim();
@@ -1019,200 +992,6 @@ function saveTransactionOffline(transaction) {
     console.log('💾 Transaction saved offline');
 }
 
-// ===== دالة مساعدة آمنة لـ toFixed =====
-function safeToFixed(value, decimals = 0) {
-    if (value === undefined || value === null || typeof value !== 'number' || !isFinite(value)) {
-        return '0';
-    }
-    return value.toFixed(decimals);
-}
-
-// ===== تحميل التحليلات =====
-async function loadAnalytics() {
-    const container = document.getElementById('analyticsContainer');
-    if (!container) return;
-    container.innerHTML = `<p>⏳ ${t('loadingAnalytics')}</p>`;
-
-    // التحقق من صحة التوكن
-    if (!isTokenValid()) {
-        container.innerHTML = `<div class="analytics-error"><i class="fas fa-exclamation-triangle"></i><p>${t('sessionExpired')}</p></div>`;
-        // إعادة التوجيه لتسجيل الدخول بعد 3 ثوانٍ
-        setTimeout(() => {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            window.location.href = '/';
-        }, 3000);
-        return;
-    }
-
-    try {
-        const res = await fetch(`${API}/analytics/insights`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const data = await res.json();
-
-        if (data.success) {
-            renderAnalytics(data.data);
-        } else {
-            container.innerHTML = `
-                <div class="analytics-error">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <p>${data.message || 'حدث خطأ أثناء تحميل التحليلات'}</p>
-                </div>
-            `;
-        }
-    } catch (err) {
-        console.error('Error loading analytics:', err);
-        container.innerHTML = `
-            <div class="analytics-error">
-                <i class="fas fa-exclamation-triangle"></i>
-                <p>حدث خطأ في الاتصال بالخادم</p>
-            </div>
-        `;
-    }
-}
-
-// ===== عرض التحليلات =====
-function renderAnalytics(analytics) {
-    const container = document.getElementById('analyticsContainer');
-    if (!container) return;
-
-    if (!analytics || typeof analytics !== 'object') {
-        container.innerHTML = `<p style="color:#999;">لا توجد بيانات تحليلية متاحة</p>`;
-        return;
-    }
-
-    // 1. التوصيات
-    let insightsHtml = '';
-    if (Array.isArray(analytics.insights) && analytics.insights.length > 0) {
-        insightsHtml = analytics.insights.map(i => {
-            const type = i.type || 'info';
-            const title = i.title || 'توصية';
-            const description = i.description || 'لا توجد تفاصيل';
-            const action = i.action || 'لا يوجد إجراء مقترح';
-            return `
-                <div class="insight-card insight-${type}">
-                    <div class="insight-header">
-                        <span class="insight-icon">${title.split(' ')[0] || '💡'}</span>
-                        <span class="insight-title">${title}</span>
-                    </div>
-                    <p class="insight-description">${description}</p>
-                    <div class="insight-action">
-                        <i class="fas fa-lightbulb"></i> ${action}
-                    </div>
-                </div>
-            `;
-        }).join('');
-    } else {
-        insightsHtml = `<p style="color:#999;">لا توجد توصيات حالياً</p>`;
-    }
-
-    // 2. التنبؤات
-    let predictionsHtml = '';
-    const predictions = analytics.predictions;
-    if (predictions && typeof predictions === 'object') {
-        const nextMonthTotal = predictions.nextMonthTotal;
-        const confidence = predictions.confidence;
-        if (typeof nextMonthTotal === 'number' && isFinite(nextMonthTotal)) {
-            const conf = (typeof confidence === 'number' && isFinite(confidence)) ? confidence : 0;
-            const trend = predictions.trend === 'increasing' ? '📈 صاعد' :
-                          predictions.trend === 'decreasing' ? '📉 هابط' : 'متذبذب';
-            predictionsHtml = `
-                <div class="prediction-card">
-                    <h4>📊 توقع المصروفات للشهر القادم</h4>
-                    <div class="prediction-total">
-                        <span class="prediction-amount">${safeToFixed(nextMonthTotal)} DZD</span>
-                        <span class="prediction-confidence">دقة: ${safeToFixed(conf)}%</span>
-                    </div>
-                    <div class="prediction-trend">الاتجاه: ${trend}</div>
-                </div>
-            `;
-        }
-    }
-
-    // 3. الشذوذ
-    let anomaliesHtml = '';
-    const anomalies = analytics.anomalies;
-    if (Array.isArray(anomalies) && anomalies.length > 0) {
-        anomaliesHtml = `
-            <div class="anomalies-card">
-                <h4>🚨 المعاملات غير الطبيعية</h4>
-                ${anomalies.slice(0, 5).map(a => {
-                    const desc = a.description || 'معاملة غير معروفة';
-                    const amount = (typeof a.amount === 'number' && isFinite(a.amount)) ? a.amount : 0;
-                    const reason = a.reason || 'غير محدد';
-                    return `
-                        <div class="anomaly-item">
-                            <span>${desc}</span>
-                            <span class="anomaly-amount">${safeToFixed(amount)} DZD</span>
-                            <span class="anomaly-reason">${reason}</span>
-                        </div>
-                    `;
-                }).join('')}
-            </div>
-        `;
-    }
-
-    // 4. الارتباطات
-    let correlationsHtml = '';
-    const correlations = analytics.correlations;
-    if (Array.isArray(correlations) && correlations.length > 0) {
-        correlationsHtml = `
-            <div class="correlations-card">
-                <h4>🔗 العلاقات بين الفئات</h4>
-                ${correlations.slice(0, 3).map(c => {
-                    const cat1 = c.category1 || '?';
-                    const cat2 = c.category2 || '?';
-                    const strength = c.strength || 'ضعيفة';
-                    const type = c.type || 'غير معروف';
-                    return `
-                        <div class="correlation-item">
-                            <span>${cat1} ↔ ${cat2}</span>
-                            <span class="correlation-strength">${strength}</span>
-                            <span class="correlation-type">${type}</span>
-                        </div>
-                    `;
-                }).join('')}
-            </div>
-        `;
-    }
-
-    // 5. الملخص
-    let summaryHtml = '';
-    const summary = analytics.summary;
-    if (summary && typeof summary === 'object') {
-        const totalExpenses = (typeof summary.totalExpenses === 'number' && isFinite(summary.totalExpenses)) ? summary.totalExpenses : 0;
-        const totalIncome = (typeof summary.totalIncome === 'number' && isFinite(summary.totalIncome)) ? summary.totalIncome : 0;
-        const transactionCount = summary.transactionCount || 0;
-        const avgExpense = (typeof summary.averageExpense === 'number' && isFinite(summary.averageExpense)) ? summary.averageExpense : 0;
-
-        summaryHtml = `
-            <div class="summary-card">
-                <h4>📋 ملخص سريع</h4>
-                <div class="summary-grid">
-                    <div><span>المصروفات الكلية</span> <strong>${safeToFixed(totalExpenses)} DZD</strong></div>
-                    <div><span>الدخل الكلي</span> <strong>${safeToFixed(totalIncome)} DZD</strong></div>
-                    <div><span>عدد المعاملات</span> <strong>${transactionCount}</strong></div>
-                    <div><span>متوسط الإنفاق</span> <strong>${safeToFixed(avgExpense)} DZD</strong></div>
-                </div>
-            </div>
-        `;
-    }
-
-    container.innerHTML = `
-        <div class="analytics-grid">
-            <div class="insights-section">${insightsHtml}</div>
-            <div class="predictions-section">${predictionsHtml}</div>
-            <div class="anomalies-section">${anomaliesHtml}</div>
-            <div class="correlations-section">${correlationsHtml}</div>
-            <div class="summary-section">${summaryHtml}</div>
-        </div>
-    `;
-}
-
-window.loadAnalytics = loadAnalytics;
-window.renderAnalytics = renderAnalytics;
-
 // ===== التصفية والبحث =====
 function filterTransactions() {
     const search = document.getElementById('searchInput').value.toLowerCase();
@@ -1244,7 +1023,6 @@ function changeLanguage(lang) {
     if (token) {
         updateUserLanguage(lang);
     }
-    // إعادة تحميل الصفحة لتطبيق جميع التغييرات
     window.location.reload();
 }
 
@@ -1327,7 +1105,6 @@ async function init() {
         await loadSettings();
         await loadGoals();
         await loadDashboard();
-        await loadAnalytics();
 
     } else {
         document.getElementById('app').style.display = 'none';
@@ -1408,9 +1185,6 @@ window.addEventListener('online', () => {
     console.log('🔄 Network connected - syncing offline data');
     syncOfflineData();
 });
-
-// استدعاء الدالة بعد تحميل الصفحة
-document.addEventListener('DOMContentLoaded', () => {
 
 // بدء التطبيق
 init();
