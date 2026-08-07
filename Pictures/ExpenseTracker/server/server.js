@@ -1,11 +1,16 @@
 const express = require('express');
 const dotenv = require('dotenv');
-const cors = require('cors');
 const path = require('path');
 const connectDB = require('./config/db');
 
 dotenv.config();
 connectDB();
+
+const cors = require('cors');
+  origin: 'https://expenses-manager-inky.vercel.app',
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
 const app = express();
 app.use(cors());
