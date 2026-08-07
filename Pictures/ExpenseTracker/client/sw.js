@@ -1,5 +1,5 @@
 // ===== Service Worker للتطبيق =====
-const CACHE_NAME = 'expense-tracker-v3';
+const CACHE_NAME = 'expense-tracker-v4';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
