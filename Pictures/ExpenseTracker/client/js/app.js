@@ -1,7 +1,7 @@
 // ===== عنوان API =====
 const API = window.location.hostname === 'localhost' 
     ? 'http://localhost:5000/api' 
-    : 'https://expenses-manager-8d9a.onrender.com/api';
+    : 'https://expenses-manager-87cc.onrender.com/api';
 
 let token = localStorage.getItem('token');
 let transactions = [];
