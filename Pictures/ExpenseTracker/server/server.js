@@ -8,8 +8,79 @@ dotenv.config();
 connectDB();
 
 const app = express();
-app.use(cors());
-app.use(express.json());
+
+const allowedOrigins = [
+    'https://expenses-manager-inky.vercel.app',
+    'http://localhost:3000',
+    'http://localhost:5000'
+];
+
+app.use(cors({
+    origin: function (origin, callback) {
+        // السماح للطلبات بدون Origin مثل server-to-server / health checks
+        if (!origin) {
+            return callback(null, true);
+        }
+
+        if (allowedOrigins.includes(origin)) {
+            return callback(null, true);
+        }
+
+        console.warn(`⚠️ CORS blocked origin: ${origin}`);
+        return callback(new Error('Not allowed by CORS'));
+    },
+
+    methods: [
+        'GET',
+        'POST',
+        'PUT',
+        'PATCH',
+        'DELETE',
+        'OPTIONS'
+    ],
+
+    allowedHeaders: [
+        'Content-Type',
+        'Authorization',
+        'Accept'
+    ],
+
+    credentials: false,
+
+    optionsSuccessStatus: 204
+}));
+
+// معالجة طلبات CORS preflight
+app.options('*', cors({
+    origin: function (origin, callback) {
+        if (!origin || allowedOrigins.includes(origin)) {
+            return callback(null, true);
+        }
+
+        return callback(new Error('Not allowed by CORS'));
+    },
+
+    methods: [
+        'GET',
+        'POST',
+        'PUT',
+        'PATCH',
+        'DELETE',
+        'OPTIONS'
+    ],
+
+    allowedHeaders: [
+        'Content-Type',
+        'Authorization',
+        'Accept'
+    ],
+
+    credentials: false,
+
+    optionsSuccessStatus: 204
+}));
+
+app.use(express.json({ limit: '100kb' }));
 
 // ===== إعدادات PWA =====
 // تقديم ملف manifest.json
