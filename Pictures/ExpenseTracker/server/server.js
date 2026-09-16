@@ -11,6 +11,7 @@ const app = express();
 
 const allowedOrigins = [
     'https://expenses-manager-inky.vercel.app',
+    'https://expenses-manager-production-2169.up.railway.app',
     'http://localhost:3000',
     'http://localhost:5000'
 ];
