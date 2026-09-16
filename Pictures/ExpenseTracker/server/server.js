@@ -156,13 +156,13 @@ app.get('/api/status', (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-    console.log(`🚀 Server running on http://localhost:${PORT}`);
+    console.log(`🚀 Server running on http://expenses-manager-production-2169.up.railway.app:${PORT}`);
 });
 
 // ===== إبقاء الخادم نشطاً =====
 const keepAlive = () => {
     const port = process.env.PORT || 5000;
-    const url = `http://localhost:${port}/api/status`;
+    const url = `expenses-manager-production-2169.up.railway.app:${port}/api/status`;
     
     setInterval(async () => {
         try {
